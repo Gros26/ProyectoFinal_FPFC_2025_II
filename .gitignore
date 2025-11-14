@@ -45,3 +45,7 @@ build/
 
 ### Scala ###
 .bsp/
+
+.metals/
+.bloop/
+metals.sbt
