@@ -1,4 +1,5 @@
 import Datos._
+import common._
 
 package object Itinerarios {
   def itinerarios(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
@@ -21,6 +22,37 @@ package object Itinerarios {
           vuelo <- vuelosDisponibles
           itinerario <- buscar(vuelo.Dst, destino, visitados + vuelo.Dst)
         } yield vuelo :: itinerario
+      }
+    }
+
+    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1))
+  }
+
+  def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
+
+    def buscar(actual: String, destino: String, visitados: Set[String]): List[Itinerario] = {
+      if (actual == destino) List(Nil)
+      else {
+        val vuelosDisponibles = vuelosPorOrigen(actual).filterNot(v => visitados(v.Dst))
+        
+        buscarParalelo(vuelosDisponibles, destino, visitados)
+      }
+    }
+
+    //aqui procesamos en paralelo
+    def buscarParalelo(vuelos: List[Vuelo], destino: String, visitados: Set[String]): List[Itinerario] = {
+      vuelos match {
+        case Nil => Nil
+        case vuelo :: Nil =>
+          buscar(vuelo.Dst, destino, visitados + vuelo.Dst).map(vuelo :: _)
+        case _ =>
+          val (mitad1, mitad2) = vuelos.splitAt(vuelos.length / 2)
+          val (izq, der) = parallel(
+            buscarParalelo(mitad1, destino, visitados),
+            buscarParalelo(mitad2, destino, visitados)
+          )
+          izq ::: der
       }
     }
 
