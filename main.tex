@@ -1,0 +1,178 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+
+\title{Proyecto}
+\author{Sebastian Ovi}
+\date{November 2025}
+
+\begin{document}
+
+\maketitle
+
+\section*{Correctitud de la función \texttt{itinerariosTiempo}}
+
+Sea \texttt{itinerariosTiempo(vuelos,aeropuertos)} una función que retorna otra
+función $G$ tal que, dados dos códigos de aeropuerto $c_1$ y $c_2$,
+$G(c_1,c_2)$ devuelve la lista de itinerarios mínimos en tiempo total
+de viaje entre dichos aeropuertos. Internamente, la función utiliza un
+procedimiento recursivo \texttt{buscarTiempo} que explora todas las
+rutas posibles, descarta aquellas con ciclos y finalmente selecciona
+las de menor tiempo total.
+
+Para demostrar la correctitud de esta implementación, consideremos la
+siguiente especificación matemática del problema:
+
+\begin{itemize}
+    \item Sea $V$ el conjunto de todos los vuelos disponibles.
+    \item Un itinerario desde $c_1$ hasta $c_2$ es una secuencia de vuelos
+          $\langle v_1,\dots,v_m \rangle$ tal que:
+          \begin{enumerate}
+              \item $v_1.\mathrm{Org} = c_1$,
+              \item $v_m.\mathrm{Dst} = c_2$,
+              \item $v_i.\mathrm{Dst} = v_{i+1}.\mathrm{Org}$ para todo $i$,
+              \item No existen ciclos: ningún aeropuerto aparece dos veces.
+          \end{enumerate}
+    \item El tiempo total del itinerario es la suma de las duraciones de cada vuelo.
+    \item La función debe devolver exactamente los tres itinerarios de menor tiempo total,
+          o menos si existen menos rutas posibles.
+\end{itemize}
+
+Denotemos por $F(c)$ el conjunto de todos los itinerarios válidos desde un
+aeropuerto $c$ hasta el destino $d$ (fijo para cada llamada).
+Sea \texttt{buscarTiempo(actual, destino, visitados)} la implementación recursiva.
+Queremos demostrar que la función computa exactamente $F(c)$.
+
+\subsection*{Definición de Correctitud}
+
+Diremos que la implementación es correcta si, para todo aeropuerto
+$A$ y destino $D$:
+
+\[
+\texttt{buscarTiempo}(A, D, \{A\}) = F(A)
+\]
+
+y la función \texttt{itinerariosTiempo} selecciona efectivamente los
+itinerarios de mínimo tiempo.
+
+\subsection*{Demostración por inducción estructural}
+
+La función es naturalmente recursiva sobre la estructura del grafo
+dirigido de vuelos, por lo que utilizamos inducción sobre la \emph{longitud}
+de los itinerarios posibles desde un aeropuerto dado.
+
+Sea $T(a)$ el conjunto de itinerarios válidos desde el aeropuerto $a$
+hasta el destino $d$. Demostraremos que:
+
+\[
+\texttt{buscarTiempo}(a,d,visitados) = T(a)
+\]
+
+para todo aeropuerto $a$ y conjunto de visitados con $a \in visitados$.
+
+\subsubsection*{Caso base}
+
+Si $a = d$, la especificación indica que existe exactamente un itinerario:
+la secuencia vacía que representa ``no hay más vuelos que tomar''.
+
+La implementación retorna:
+
+\[
+\texttt{List(Nil)}
+\]
+
+lo cual coincide con la especificación:
+
+\[
+T(d) = \{\langle \;\rangle\}.
+\]
+
+Por tanto, el caso base es correcto.
+
+\subsubsection*{Paso inductivo}
+
+Supongamos que para todos los aeropuertos $x$ tales que toda ruta
+posible desde $x$ al destino tiene longitud estrictamente menor que
+las rutas desde $a$, la implementación satisface:
+
+\[
+\texttt{buscarTiempo}(x, d, visitados \cup \{x\}) = T(x).
+\]
+
+Demostremos la correctitud para $a \neq d$.
+
+La implementación construye el conjunto:
+
+\[
+V(a) = \{ v \in V \mid v.\mathrm{Org} = a \;\wedge\; v.\mathrm{Dst} \notin visitados \}.
+\]
+
+Es decir, todos los vuelos posibles desde $a$ sin entrar en ciclo.  
+Esto coincide exactamente con la definición matemática del conjunto de vuelos válidos.
+
+Para cada vuelo $v \in V(a)$, la implementación calcula recursivamente:
+
+\[
+\texttt{buscarTiempo}(v.\mathrm{Dst}, d, visitados \cup \{v.\mathrm{Dst}\}).
+\]
+
+Por hipótesis inductiva, esto retorna exactamente el conjunto de todos
+los itinerarios desde $v.\mathrm{Dst}$ hasta $d$.
+
+La implementación construye entonces todos los itinerarios desde $a$ como:
+
+\[
+\bigcup_{v \in V(a)} \{v\} \mathbin{::} T(v.\mathrm{Dst}),
+\]
+
+que coincide \emph{exactamente} con la definición matemática de $T(a)$.
+
+Dado que:
+
+\begin{itemize}
+    \item no se omite ningún vuelo posible,
+    \item no se incluyen vuelos que generen ciclos,
+    \item todas las rutas se generan mediante concatenación correcta,
+\end{itemize}
+
+queda demostrado que:
+
+\[
+\texttt{buscarTiempo}(a,d,visitados) = T(a).
+\]
+
+\subsection*{Mínimo tiempo total}
+
+Una vez generado $T(c_1)$, la función \texttt{itinerariosTiempo}:
+
+\begin{enumerate}
+    \item Calcula la duración total de cada itinerario.
+    \item Ordena los itinerarios por su tiempo total.
+    \item Toma los tres primeros mediante \texttt{take(3)}.
+\end{enumerate}
+
+Esto corresponde exactamente a seleccionar:
+
+\[
+\text{los 3 elementos mínimos del conjunto } T(c_1)
+\]
+
+bajo el orden total definido por el tiempo total de viaje.
+
+Dado que la función genera el conjunto completo de itinerarios válidos
+y luego selecciona los de tiempo mínimo, concluimos que la implementación
+es correcta.
+
+\subsection*{Conclusión}
+
+Por inducción sobre la profundidad de búsqueda en el grafo y por análisis
+funcional de la minimización, queda demostrado que:
+
+\[
+\texttt{itinerariosTiempo(vuelos,aeropuertos)(c_1,c_2)}
+\]
+
+\emph{devuelve exactamente los tres itinerarios de menor tiempo total de viaje},
+cumpliendo con la especificación formal del problema.
+
+
+\end{document}
