@@ -175,4 +175,148 @@ funcional de la minimización, queda demostrado que:
 cumpliendo con la especificación formal del problema.
 
 
+\section*{Correctitud de la función \texttt{itinerariosTiempoPar} por inducción}
+
+Sea $G(c_1,c_2)$ la función que devuelve todos los itinerarios posibles entre los aeropuertos
+$c_1$ y $c_2$, generados por la versión paralela \texttt{itinerariosPar}.
+Sea además $T(it)$ la función que calcula el tiempo total del itinerario $it$.
+
+La función \texttt{itinerariosTiempoPar} se define como:
+\[
+\texttt{itinerariosTiempoPar}(c_1,c_2)
+  = \text{los tres itinerarios en } G(c_1,c_2) \text{ con menor tiempo total}.
+\]
+
+Formalmente, sea:
+\[
+G(c_1,c_2) = \{ it_1, it_2, \dots, it_m \}.
+\]
+
+Sea también la relación de orden:
+\[
+it_a \prec it_b \iff T(it_a) < T(it_b).
+\]
+
+La función paralela implementa:
+\[
+\texttt{ordenados} =
+\text{sort}\Big( \{ (T(it), it) \mid it \in G(c_1,c_2) \} \Big),
+\]
+y retorna:
+\[
+\texttt{ordenados.take}(3).
+\]
+
+Queremos demostrar que la implementación devuelve \emph{exactamente}
+los tres itinerarios con mínimo tiempo total entre los generados por \texttt{itinerariosPar}.
+Esto se prueba por inducción estructural sobre la longitud $m = |G(c_1,c_2)|$.
+
+\subsection*{Caso base: $m = 0$}
+
+Si $G(c_1,c_2)=\emptyset$, no existe ruta entre $c_1$ y $c_2$.
+La implementación evalúa:
+
+\[
+\{ (T(it),it) \mid it\in \emptyset \} = \emptyset.
+\]
+
+Ordenar un conjunto vacío produce un conjunto vacío:
+\[
+\texttt{sort}(\emptyset) = \emptyset.
+\]
+
+Finalmente,
+\[
+\texttt{take}(3) = \emptyset.
+\]
+
+Como no existen itinerarios, la salida es correcta.
+Por tanto,
+\[
+\texttt{itinerariosTiempoPar}(c_1,c_2) = \emptyset,
+\quad \text{que coincide con la especificación.}
+\]
+
+\subsection*{Paso inductivo}
+
+Supongamos que la función es correcta para todos los conjuntos de itinerarios
+de tamaño $m$, es decir:
+
+\[
+|G(c_1,c_2)| = m \quad \Rightarrow \quad
+\texttt{itinerariosTiempoPar}(c_1,c_2)
+\text{ devuelve los tres itinerarios de menor tiempo}.
+\]
+
+\medskip
+
+Demostremos que esto implica la correctitud para un conjunto de tamaño $m+1$.
+
+Sea:
+
+\[
+G = \{ it_1, it_2, \dots, it_m, it_{m+1} \}.
+\]
+
+Entonces la implementación evalúa el conjunto:
+
+\[
+S = \{ (T(it_1),it_1),\dots,(T(it_m),it_m),(T(it_{m+1}),it_{m+1})\}.
+\]
+
+Por hipótesis inductiva, el subtérmino:
+\[
+S' = \{ (T(it),it) \mid it\in G\setminus\{it_{m+1}\} \}
+\]
+se ordena correctamente y su \texttt{take(3)} contiene
+los tres itinerarios más rápidos en $G \setminus \{it_{m+1}\}$.
+
+Ahora consideremos $it_{m+1}$.
+
+Existen únicamente dos casos posibles:
+
+\begin{enumerate}
+  \item $T(it_{m+1})$ es mayor que los tres mínimos ya presentes en $S'$.
+        Entonces la ordenación completa:
+        \[
+          \texttt{sort}(S' \cup \{(T(it_{m+1}),it_{m+1})\})
+        \]
+        preserva los tres mínimos de $S'$.
+
+  \item $T(it_{m+1})$ es menor que al menos uno de los tres mínimos.
+        En ese caso, después de ordenar:
+        \[
+          \texttt{sort}(S' \cup \{(T(it_{m+1}),it_{m+1})\}),
+        \]
+        el algoritmo lo insertará en la posición correspondiente,
+        desplazando el itinerario de mayor tiempo entre los anteriores tres mínimos.
+\end{enumerate}
+
+En ambos casos, la operación
+\[
+\texttt{take}(3)
+\]
+extrae exactamente los tres itinerarios con menor $T(it)$ en $G$.
+
+Por tanto,
+\[
+\texttt{itinerariosTiempoPar}(c_1,c_2)
+\]
+es correcta para conjuntos de tamaño $m+1$.
+
+\subsection*{Conclusión}
+
+Por inducción, para todo $m\ge 0$:
+
+\[
+\texttt{itinerariosTiempoPar}(c_1,c_2)
+= \text{los tres itinerarios con menor tiempo total en } G(c_1,c_2).
+\]
+
+La implementación es correcta.
+
+
+
+
+
 \end{document}
