@@ -54,4 +54,30 @@ package object Itinerarios {
 
     (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
   }
+
+  def itinerariosEscalas(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    //Busco todos los itinerarios 
+    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
+
+    //Defino la funcion que me da el total de escalas
+    def totalEscalas(itinerario: Itinerario): Int = {
+      val escalasTecnicas = itinerario.map(_.Esc).sum
+      val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
+      escalasTecnicas + transbordos
+    }
+
+  (c1: String, c2: String) => {
+     //Obtengo todos los itinerarios
+     val todosLosItinerarios = buscarItinerarios(c1, c2)
+
+     if (todosLosItinerarios.isEmpty) {
+      Nil
+     } else {
+      //Me quedo con el itinerario con menos escalas
+      val minEscalas = todosLosItinerarios.map(totalEscalas).min
+      //Filtro los itinerarios con menos escalas
+      todosLosItinerarios.filter(it => totalEscalas(it) == minEscalas)
+     }
+    }
+  }
 }
