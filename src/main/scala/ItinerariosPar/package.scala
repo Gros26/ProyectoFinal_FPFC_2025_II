@@ -1,38 +1,54 @@
 import Datos._
 import common._
+import Itinerarios._
 import scala.collection.parallel.CollectionConverters._
+import scala.collection.parallel.ParSeq
 
 package object ItinerariosPar {
 
-  def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
-    def buscar(actual: String, destino: String, visitados: Set[String]): List[Itinerario] = {
+    // Umbral mínimo para paralelizar y máxima profundidad de paralelismo
+    val UMBRAL_PAR     = 4       // solo paralelizar si hay al menos 4 vuelos alternativos
+    val MAX_PROF_PAR   = 2       // solo paralelizar en los 2 primeros niveles
+
+    def buscar(actual: String, destino: String, visitados: Set[String], nivel: Int): List[Itinerario] = {
       if (actual == destino) List(Nil)
       else {
         val vuelosDisponibles = vuelosPorOrigen(actual).filterNot(v => visitados(v.Dst))
 
-        buscarParalelo(vuelosDisponibles, destino, visitados)
+        // Si hay pocos vuelos o ya estamos muy profundo, mejor hacerlo secuencial
+        if (vuelosDisponibles.size <= 1 || nivel >= MAX_PROF_PAR) {
+          // equivalente a la versión secuencial
+          for {
+            vuelo <- vuelosDisponibles
+            itinerario <- buscar(vuelo.Dst, destino, visitados + vuelo.Dst, nivel + 1)
+          } yield vuelo :: itinerario
+        } else {
+          // aquí sí vale la pena repartir el trabajo
+          buscarParalelo(vuelosDisponibles, destino, visitados, nivel)
+        }
       }
     }
 
-    //aqui procesamos en paralelo
-    def buscarParalelo(vuelos: List[Vuelo], destino: String, visitados: Set[String]): List[Itinerario] = {
-      vuelos match {
-        case Nil => Nil
-        case vuelo :: Nil =>
-          buscar(vuelo.Dst, destino, visitados + vuelo.Dst).map(vuelo :: _)
-        case _ =>
-          val (mitad1, mitad2) = vuelos.splitAt(vuelos.length / 2)
-          val (izq, der) = parallel(
-            buscarParalelo(mitad1, destino, visitados),
-            buscarParalelo(mitad2, destino, visitados)
-          )
-          izq ::: der
+    def buscarParalelo(vuelos: List[Vuelo], destino: String, visitados: Set[String], nivel: Int): List[Itinerario] = {
+      if (vuelos.size <= UMBRAL_PAR) {
+        // si ya está pequeño, volvemos a secuencial (misma lógica que arriba)
+        vuelos.flatMap { vuelo =>
+          buscar(vuelo.Dst, destino, visitados + vuelo.Dst, nivel + 1).map(vuelo :: _)
+        }
+      } else {
+        val (mitad1, mitad2) = vuelos.splitAt(vuelos.length / 2)
+        val (izq, der) = parallel(
+          buscarParalelo(mitad1, destino, visitados, nivel),
+          buscarParalelo(mitad2, destino, visitados, nivel)
+        )
+        izq ::: der
       }
     }
 
-    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1))
+    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
   }
 
   def itinerariosTiempoPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
@@ -65,5 +81,6 @@ package object ItinerariosPar {
       ordenados.take(3)
     }
   }
+
 
 }
