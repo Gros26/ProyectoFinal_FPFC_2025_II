@@ -80,4 +80,31 @@ package object Itinerarios {
      }
     }
   }
+
+  def itinerariosEscalas2(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    val todosItsFunc = itinerarios(vuelos, aeropuertos)
+
+    def buscar(actual: String, destino: String): List[Itinerario] = {
+
+      val todosIts = todosItsFunc(actual, destino)
+
+      var its_candidatos : List[Itinerario] = List()
+      var len_candidato : Int = Int.MaxValue
+
+      for (it <- todosIts) {
+        if (it.length < len_candidato) {
+          its_candidatos = List(it)
+          len_candidato = it.length
+        } else if (it.length == len_candidato) {
+          its_candidatos = its_candidatos :+ it
+
+        }
+      }
+      its_candidatos
+    }
+    buscar
+  }
+}
+
 }

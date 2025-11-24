@@ -31,3 +31,19 @@ val itsPar4 = itsCursoParalelo("CLO", "MEX")
 
 //2 itinerarios CTG-PTY
 val itsPar5 = itsCursoParalelo("CTG","PTY")
+
+val itsEscalasCurso = itinerariosEscalas2(vuelosCurso,aeropuertosCurso)
+//2.1 Aeropuertos incomunicados
+val itsEscalas1 = itsEscalasCurso("MID", "SVCS")
+val itsEscalas2 = itsEscalasCurso("CLO", "SVCS")
+
+// 4 itinerarios CLO-SVO
+
+val itsEscalas3 = itsEscalasCurso("CLO","SVO")
+
+//2 itinerarios CLO-MEX
+
+val itsEscalas4 = itsEscalasCurso("CLO", "MEX")
+
+//2 itinerarios CTG-PTY
+val itsEscalas5 = itsEscalasCurso("CTG","PTY")
