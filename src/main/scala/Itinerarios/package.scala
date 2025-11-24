@@ -1,5 +1,7 @@
 import Datos._
 import common._
+import scala.collection.mutable.HashMap
+import math._
 
 package object Itinerarios {
   def itinerarios(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
@@ -106,5 +108,47 @@ package object Itinerarios {
     buscar
   }
 
+  def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    val todosItsFunc = itinerarios(vuelos, aeropuertos)
+    val codigoApHashMap: HashMap[String, Aeropuerto] = HashMap.from(aeropuertos.map(aeropuerto => aeropuerto.Cod -> aeropuerto))
+
+
+    def distAP(Org : Aeropuerto, Dst : Aeropuerto) : Double = {
+
+      sqrt(pow(Org.X - Dst.X, 2) + pow(Org.Y - Dst.Y, 2))
+    }
+
+    def vueloAire(vuelo: Vuelo) : Double = {
+      distAP(codigoApHashMap(vuelo.Org), codigoApHashMap(vuelo.Dst))
+    }
+
+    def itinerarioAire(itinerario: Itinerario) : Double = {
+      itinerario.map(vueloAire).sum
+    }
+
+    def buscar(actual: String, destino: String): List[Itinerario] = {
+
+      val todosIts = todosItsFunc(actual, destino)
+
+      val todosItsAire = todosIts.map(itinerarioAire)
+
+      var its_candidatos : List[Itinerario] = List()
+      var aire_candidato : Double = Double.MaxValue
+
+      for ((itAire, idx) <- todosItsAire.zipWithIndex) {
+        if (itAire < aire_candidato) {
+          its_candidatos = List(todosIts(idx))
+          aire_candidato = itAire
+        } else if (itAire == aire_candidato) {
+          its_candidatos = its_candidatos :+ todosIts(idx)
+        }
+      }
+      its_candidatos
+    }
+    buscar
+  }
 
 }
+
+
