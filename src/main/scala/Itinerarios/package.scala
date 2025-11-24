@@ -35,24 +35,19 @@ package object Itinerarios {
 
     // Función auxiliar: calcula el tiempo total de un itinerario
     def tiempoTotal(it: Itinerario): Int = {
-      /*
-        Un itinerario es List[Vuelo].
-        El tiempo total se calcula:
-        - horaLlegadaÚltimo - horaSalidaPrimero + sumatoria de tiempos de vuelo
-      */
-
       if (it.isEmpty) 0
       else {
         val primero = it.head
         val ultimo  = it.last
 
-        // Convertir horas a minutos
         def aMinutos(h: Int, m: Int) = h * 60 + m
+        val salida  = aMinutos(primero.HS, primero.MS)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
 
-        val salida = aMinutos(primero.HS, primero.MS)
-        val llegada = aMinutos(ultimo.HL, ultimo.ML)
+        // Si llega al día siguiente
+        if (llegada < salida)
+          llegada += 24 * 60
 
-        // tiempo de viaje total en minutos
         llegada - salida
       }
     }

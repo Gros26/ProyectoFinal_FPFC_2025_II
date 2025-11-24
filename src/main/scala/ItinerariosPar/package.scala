@@ -60,9 +60,14 @@ package object ItinerariosPar {
       else {
         val primero = it.head
         val ultimo  = it.last
+
         def aMinutos(h: Int, m: Int) = h * 60 + m
+
         val salida  = aMinutos(primero.HS, primero.MS)
-        val llegada = aMinutos(ultimo.HL, ultimo.ML)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
+
+        if (llegada < salida) llegada += 24 * 60
+
         llegada - salida
       }
     }
@@ -73,9 +78,9 @@ package object ItinerariosPar {
       val ordenados =
         todos
           .par
-          .map(it => (tiempoTotal(it), it)) // paraleliza cálculo
+          .map(it => (tiempoTotal(it), it))
           .toList
-          .sortBy(_._1)   // ordena secuencial
+          .sortBy(_._1)
           .map(_._2)
 
       ordenados.take(3)

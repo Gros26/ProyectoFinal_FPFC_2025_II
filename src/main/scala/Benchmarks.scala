@@ -112,15 +112,73 @@ object Benchmarks {
 
   def compararTiempo(dataset: String, origen: String, destino: String,
                      vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): Unit = {
-    // TODO: Implementar cuando tengas itinerariosTiempo e itinerariosTiempoPar
-    println(f"$dataset%-12s | $origen→$destino%-8s | TODO")
+
+    if (vuelos.isEmpty) {
+      println(f"$dataset%-12s | $origen→$destino%-8s | ${0}%-6d | ${0}%-12d | ${0.0}%.3f | ${0.0}%.3f | N/A")
+      return
+    }
+
+    val itsTiempo    = itinerariosTiempo(vuelos, aeropuertos)
+    val itsTiempoPar = itinerariosTiempoPar(vuelos, aeropuertos)
+
+    var resultSeq: List[Itinerario] = Nil
+    var resultPar: List[Itinerario] = Nil
+
+    val timeSeq = standardConfig measure {
+      resultSeq = itsTiempo(origen, destino)
+    }
+
+    val timePar = standardConfig measure {
+      resultPar = itsTiempoPar(origen, destino)
+    }
+
+    val timeSeqMs = timeSeq.value * 1000.0
+    val timeParMs = timePar.value * 1000.0
+    val speedup = if (timeParMs == 0.0) Double.PositiveInfinity else timeSeqMs / timeParMs
+    val correct = resultSeq.toSet == resultPar.toSet
+
+    println(f"$dataset%-12s | $origen→$destino%-8s | ${vuelos.length}%-6d | ${resultSeq.length}%-12d | $timeSeqMs%12.3f | $timeParMs%10.3f | $speedup%6.2fx")
+
+    if (!correct) {
+      println("⚠️  ERROR: Los resultados secuencial y paralelo no coinciden!")
+    }
   }
 
   def benchmarkTiempoCurso(): Unit = {
-    println("\n// Ejemplos del curso:")
-    compararTiempo("Curso-1", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
-    // ... etc
+    println("\n// Ejemplos del curso (Tiempo):")
+    compararTiempo("Curso-T1", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
+    compararTiempo("Curso-T2", "CLO", "MEX", vuelosCurso, aeropuertosCurso)
+    compararTiempo("Curso-T3", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
+    compararTiempo("Curso-T4", "MID", "SVCS", vuelosCurso, aeropuertosCurso)
   }
+
+  def benchmarkTiempoA(): Unit = {
+    println("\n// Dataset A (15 vuelos) — Tiempo:")
+    compararTiempo("A1-T", "HOU", "BNA", VuelosA.vuelosA1, aeropuertos)
+    compararTiempo("A2-T", "HOU", "BNA", VuelosA.vuelosA2, aeropuertos)
+    compararTiempo("A3-T", "HOU", "BNA", VuelosA.vuelosA3, aeropuertos)
+  }
+
+  def benchmarkTiempoB(): Unit = {
+    println("\n// Dataset B (40 vuelos) — Tiempo:")
+    compararTiempo("B1-T", "DFW", "ORD", VuelosB.vuelosB1, aeropuertos)
+    compararTiempo("B2-T", "DFW", "ORD", VuelosB.vuelosB2, aeropuertos)
+    compararTiempo("B3-T", "DFW", "ORD", VuelosB.vuelosB3, aeropuertos)
+  }
+
+  def benchmarkTiempoC(): Unit = {
+    println("\n// Dataset C (100 vuelos) — Tiempo:")
+    compararTiempo("C1-T", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
+    compararTiempo("C2-T", "ORD", "TPA", VuelosC.vuelosC2, aeropuertos)
+    compararTiempo("C3-T", "ORD", "TPA", VuelosC.vuelosC3, aeropuertos)
+  }
+
+  def benchmarkTiempoD(): Unit = {
+  println("\n// Dataset D (500 vuelos) — Tiempo:")
+  compararTiempo("D1-T", "ORD", "LAX", VuelosD.vuelosD1, aeropuertos)
+  compararTiempo("D2-T", "ORD", "LAX", VuelosD.vuelosD2, aeropuertos)
+  compararTiempo("D3-T", "ORD", "LAX", VuelosD.vuelosD3, aeropuertos)
+}
 
   // ============================================
   // BENCHMARKS PARA: itinerariosEscalas

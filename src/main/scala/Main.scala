@@ -22,7 +22,9 @@ object Main extends App {
         Benchmarks.imprimirPie()
         
       case "tiempo" | "t" =>
-        println("⚠️  Función no implementada aún")
+        Benchmarks.imprimirEncabezado("ITINERARIOSTIEMPO vs ITINERARIOSTIEMPO_PAR")
+        ejecutarDatasets(datasets, ejecutarItinerariosTiempo)
+        Benchmarks.imprimirPie()
         
       case "escalas" | "e" =>
         println("⚠️  Función no implementada aún")
@@ -58,6 +60,22 @@ object Main extends App {
         Benchmarks.benchmarkItinerariosA()
         Benchmarks.benchmarkItinerariosB()
         Benchmarks.benchmarkItinerariosC()
+      case _ => println(s"⚠️  Dataset desconocido: $dataset")
+    }
+  }
+
+  def ejecutarItinerariosTiempo(dataset: String): Unit = {
+    dataset.toLowerCase match {
+      case "curso" | "c" => Benchmarks.benchmarkTiempoCurso()
+      case "a" | "a1" | "a2" | "a3" => Benchmarks.benchmarkTiempoA()
+      case "b" | "b1" | "b2" | "b3" => Benchmarks.benchmarkTiempoB()
+      case "c" | "c1" | "c2" | "c3" => Benchmarks.benchmarkTiempoC()
+      case "d" | "d1" | "d2" | "d3" => Benchmarks.benchmarkTiempoD()
+      case "all" | "todos" =>
+        Benchmarks.benchmarkTiempoCurso()
+        Benchmarks.benchmarkTiempoA()
+        Benchmarks.benchmarkTiempoB()
+        Benchmarks.benchmarkTiempoC()
       case _ => println(s"⚠️  Dataset desconocido: $dataset")
     }
   }
@@ -130,8 +148,20 @@ object Main extends App {
             if (datasets.contains(5)) Benchmarks.benchmarkItinerariosD()
             Benchmarks.imprimirPie()
           }
+        
+        case "2" =>
+          val datasets = seleccionarDatasets()
+          if (datasets.nonEmpty) {
+            Benchmarks.imprimirEncabezado("ITINERARIOSTIEMPO vs ITINERARIOSTIEMPO_PAR")
+            if (datasets.contains(1)) Benchmarks.benchmarkTiempoCurso()
+            if (datasets.contains(2)) Benchmarks.benchmarkTiempoA()
+            if (datasets.contains(3)) Benchmarks.benchmarkTiempoB()
+            if (datasets.contains(4)) Benchmarks.benchmarkTiempoC()
+            if (datasets.contains(5)) Benchmarks.benchmarkTiempoD()
+            Benchmarks.imprimirPie()
+          }
           
-        case "2" | "3" | "4" | "5" =>
+        case "3" | "4" | "5" =>
           println("\n⚠️  Esta función aún no está implementada.")
           
         case _ =>
