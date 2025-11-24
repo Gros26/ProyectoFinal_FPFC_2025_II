@@ -2,6 +2,8 @@ import Datos._
 import common._
 
 package object Itinerarios {
+
+
   def itinerarios(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
@@ -18,6 +20,10 @@ package object Itinerarios {
 
     (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1))
   }
+
+
+  
+
 
   def itinerarioSalida(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
 

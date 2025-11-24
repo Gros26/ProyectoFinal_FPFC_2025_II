@@ -130,8 +130,20 @@ object Main extends App {
             if (datasets.contains(5)) Benchmarks.benchmarkItinerariosD()
             Benchmarks.imprimirPie()
           }
+        
+        case "5" =>
+          val datasets = seleccionarDatasets()
+          if (datasets.nonEmpty) {
+            Benchmarks.imprimirEncabezadoSalida("ITINERARIO_SALIDA vs ITINERARIO_SALIDA_PAR")
+            if (datasets.contains(1)) Benchmarks.benchmarkSalidaCurso()
+            if (datasets.contains(2)) Benchmarks.benchmarkSalidaA()
+            if (datasets.contains(3)) Benchmarks.benchmarkSalidaB()
+            if (datasets.contains(4)) Benchmarks.benchmarkSalidaC()
+            if (datasets.contains(5)) Benchmarks.benchmarkSalidaD()
+            Benchmarks.imprimirPie()
+          }
           
-        case "2" | "3" | "4" | "5" =>
+        case "2" | "3" | "4"  =>
           println("\n⚠️  Esta función aún no está implementada.")
           
         case _ =>
