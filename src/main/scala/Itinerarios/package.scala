@@ -61,8 +61,8 @@ package object Itinerarios {
       // 2. Ordenar por su tiempo total
       val ordenados = todos.sortBy(tiempoTotal)
 
-      // 3. Retornar los tres mejores (o menos si no hay tantos)
-      ordenados.take(3)
+      // // 3. Retornar los tres mejores (o menos si no hay tantos)
+      ordenados
     }
   }
 

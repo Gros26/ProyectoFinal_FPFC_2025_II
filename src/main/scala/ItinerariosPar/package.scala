@@ -83,7 +83,7 @@ package object ItinerariosPar {
           .sortBy(_._1)
           .map(_._2)
 
-      ordenados.take(3)
+      ordenados
     }
   }
 
