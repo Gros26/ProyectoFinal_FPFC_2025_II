@@ -48,9 +48,10 @@ package object ItinerariosPar {
         izq ::: der
       }
     }
+    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
+  }
 
-
-    def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => ((String, String) => List[Itinerario]) = {
+    def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
       def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
         val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
@@ -71,11 +72,10 @@ package object ItinerariosPar {
           }
 
         }
-          (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
       }
-
       inner
     }
+
 
 
     val itinerarioTiempoPar = itinerariosParBase(objectivoTiempo, 3)
@@ -86,6 +86,6 @@ package object ItinerariosPar {
       => itinerariosParBase(objectivoSalida(HS, MS))(vuelos, aeropuertos)
 
 
-  }
+
 }
 
