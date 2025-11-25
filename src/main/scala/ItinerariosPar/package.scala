@@ -1,17 +1,18 @@
 import Datos._
 import common._
+import helpers._
 import Itinerarios._
 import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ParSeq
 
 package object ItinerariosPar {
 
-    def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+  def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
     // Umbral mínimo para paralelizar y máxima profundidad de paralelismo
-    val UMBRAL_PAR     = 4       // solo paralelizar si hay al menos 4 vuelos alternativos
-    val MAX_PROF_PAR   = 2       // solo paralelizar en los 2 primeros niveles
+    val UMBRAL_PAR = 4 // solo paralelizar si hay al menos 4 vuelos alternativos
+    val MAX_PROF_PAR = 2 // solo paralelizar en los 2 primeros niveles
 
     def buscar(actual: String, destino: String, visitados: Set[String], nivel: Int): List[Itinerario] = {
       if (actual == destino) List(Nil)
@@ -48,28 +49,43 @@ package object ItinerariosPar {
       }
     }
 
-    def itinerariosEscalasPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
-      val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
 
-      def totalEscalas(itinerario: Itinerario): Int = {
-        val escalasTecnicas = itinerario.map(_.Esc).sum
-        val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
-        escalasTecnicas + transbordos
-      }
+    def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => ((String, String) => List[Itinerario]) = {
+      def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
-      (c1: String, c2: String) => {
-        val todosLosItinerarios = buscarItinerarios(c1, c2)
-        
-        if(todosLosItinerarios.isEmpty) {
-          Nil
-        } else {
-          val todosLosItinerariosPar = todosLosItinerarios.par
-          val minEscalas = todosLosItinerariosPar.map(totalEscalas).min
-          todosLosItinerariosPar.filter(it => totalEscalas(it) == minEscalas).toList
+        val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
+
+        (c1: String, c2: String) => {
+          val todosLosItinerarios = buscarItinerarios(c1, c2)
+
+          if (todosLosItinerarios.isEmpty) {
+            Nil
+          }
+
+          if (top_k == 0) {
+            val todosLosItinerariosPar = todosLosItinerarios.par
+            val valor_optimo = todosLosItinerariosPar.map(objective_function).min
+            todosLosItinerariosPar.filter(it => objective_function(it) == valor_optimo).toList
+          } else {
+            todosLosItinerarios.sortBy(objective_function).take(top_k)
+          }
+
         }
+          (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
       }
+
+      inner
     }
 
-    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
+
+    val itinerarioTiempoPar = itinerariosParBase(objectivoTiempo, 3)
+    val itinerariosEscalasPar = itinerariosParBase(objectivoEscalas)
+    val itinerariosAirePar = itinerariosParBase(objectivoAire)
+    val itinerariosSalidaPar =
+      (vuelos: List[Vuelo], aeropuertos: List[Aeropuerto], HS: Int, MS: Int)
+      => itinerariosParBase(objectivoSalida(HS, MS))(vuelos, aeropuertos)
+
+
   }
 }
+

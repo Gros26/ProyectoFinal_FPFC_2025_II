@@ -1,4 +1,5 @@
 import Datos._
+import helpers._
 import common._
 import scala.collection.mutable.HashMap
 import math._
@@ -23,17 +24,7 @@ package object Itinerarios {
 
   def itinerarioSalida(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
 
-    def aMinutos(h: Int, m: Int): Int = h * 60 + m
 
-    def horaSalida(itinerario: Itinerario): Int = itinerario match {
-      case Nil => 0
-      case vuelo :: _ => aMinutos(vuelo.HS, vuelo.MS)
-    }
-
-    def horaLlegada(itinerario: Itinerario): Int = itinerario match {
-      case Nil => 0
-      case vuelos => aMinutos(vuelos.last.HL, vuelos.last.ML)
-    }
 
     val buscarItinerarios = itinerarios(vuelos, aeropuertos)
 
@@ -61,12 +52,6 @@ package object Itinerarios {
     //Busco todos los itinerarios 
     val buscarItinerarios = itinerarios(vuelos, aeropuertos)
 
-    //Defino la funcion que me da el total de escalas
-    def totalEscalas(itinerario: Itinerario): Int = {
-      val escalasTecnicas = itinerario.map(_.Esc).sum
-      val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
-      escalasTecnicas + transbordos
-    }
 
   (c1: String, c2: String) => {
      //Obtengo todos los itinerarios
@@ -83,55 +68,18 @@ package object Itinerarios {
     }
   }
 
-  def itinerariosEscalas2(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
-    val todosItsFunc = itinerarios(vuelos, aeropuertos)
-
-    def buscar(actual: String, destino: String): List[Itinerario] = {
-
-      val todosIts = todosItsFunc(actual, destino)
-
-      var its_candidatos : List[Itinerario] = List()
-      var len_candidato : Int = Int.MaxValue
-
-      for (it <- todosIts) {
-        if (it.length < len_candidato) {
-          its_candidatos = List(it)
-          len_candidato = it.length
-        } else if (it.length == len_candidato) {
-          its_candidatos = its_candidatos :+ it
-
-        }
-      }
-      its_candidatos
-    }
-    buscar
-  }
 
   def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
     val todosItsFunc = itinerarios(vuelos, aeropuertos)
-    val codigoApHashMap: HashMap[String, Aeropuerto] = HashMap.from(aeropuertos.map(aeropuerto => aeropuerto.Cod -> aeropuerto))
 
-
-    def distAP(Org : Aeropuerto, Dst : Aeropuerto) : Double = {
-
-      sqrt(pow(Org.X - Dst.X, 2) + pow(Org.Y - Dst.Y, 2))
-    }
-
-    def vueloAire(vuelo: Vuelo) : Double = {
-      distAP(codigoApHashMap(vuelo.Org), codigoApHashMap(vuelo.Dst))
-    }
-
-    def itinerarioAire(itinerario: Itinerario) : Double = {
-      itinerario.map(vueloAire).sum
-    }
 
     def buscar(actual: String, destino: String): List[Itinerario] = {
 
       val todosIts = todosItsFunc(actual, destino)
 
-      val todosItsAire = todosIts.map(itinerarioAire)
+      val todosItsAire = todosIts.map(totalAire)
 
       var its_candidatos : List[Itinerario] = List()
       var aire_candidato : Double = Double.MaxValue
