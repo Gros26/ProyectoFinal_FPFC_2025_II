@@ -72,7 +72,7 @@ object Benchmarks {
 
   def benchmarkItinerariosCurso(): Unit = {
     println("\n// Ejemplos del curso:")
-    compararItinerarios("Curso-1", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
+    compararItinerarios("Curso", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
     compararItinerarios("Curso-2", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
     compararItinerarios("Curso-3", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
     compararItinerarios("Curso-4", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
@@ -114,6 +114,8 @@ object Benchmarks {
     compararItinerarios("B3-2", "DFW", "DCA", VuelosB.vuelosB3, aeropuertos)
     compararItinerarios("B3-3", "ORD", "MIA", VuelosB.vuelosB3, aeropuertos)
   }
+
+  // 
 
   def benchmarkItinerariosC(): Unit = {
     println("\n// Dataset C1 (100 vuelos):")
