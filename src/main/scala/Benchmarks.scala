@@ -115,6 +115,8 @@ object Benchmarks {
     compararItinerarios("B3-3", "ORD", "MIA", VuelosB.vuelosB3, aeropuertos)
   }
 
+  // 
+
   def benchmarkItinerariosC(): Unit = {
     println("\n// Dataset C1 (100 vuelos):")
     compararItinerarios("C1-1", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
