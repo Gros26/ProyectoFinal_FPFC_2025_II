@@ -252,30 +252,53 @@ object Benchmarks {
   }
 
   def benchmarkSalidaA(): Unit = {
-    println("\n// Dataset A (15 vuelos):")
-    compararSalida("A1", "HOU", "BNA", 18, 30, VuelosA.vuelosA1, aeropuertos)
-    compararSalida("A2", "HOU", "BNA", 15, 0, VuelosA.vuelosA2, aeropuertos)
-    compararSalida("A3", "HOU", "BNA", 12, 0, VuelosA.vuelosA3, aeropuertos)
+  println("\n// Dataset A1 (15 vuelos):")
+  compararSalida("A1-1", "HOU", "MSY", 18, 30, VuelosA.vuelosA1, aeropuertos)
+  compararSalida("A1-2", "MSY", "BNA", 15, 0, VuelosA.vuelosA1, aeropuertos)
+  compararSalida("A1-3", "DFW", "ORD", 20, 0, VuelosA.vuelosA1, aeropuertos)
+  
+  println("\n// Dataset A2 (15 vuelos):")
+  compararSalida("A2-1", "DFW", "ORD", 18, 30, VuelosA.vuelosA2, aeropuertos)
+  compararSalida("A2-2", "SFO", "BNA", 16, 0, VuelosA.vuelosA2, aeropuertos)
+  compararSalida("A2-3", "PHX", "LAX", 14, 30, VuelosA.vuelosA2, aeropuertos)
+  
+  println("\n// Dataset A3 (15 vuelos):")
+  compararSalida("A3-1", "MIA", "HOU", 19, 0, VuelosA.vuelosA3, aeropuertos)
+  compararSalida("A3-2", "LAX", "MIA", 17, 30, VuelosA.vuelosA3, aeropuertos)
+  compararSalida("A3-3", "DFW", "SFO", 21, 0, VuelosA.vuelosA3, aeropuertos)
   }
 
   def benchmarkSalidaB(): Unit = {
-    println("\n// Dataset B (40 vuelos):")
-    compararSalida("B1", "DFW", "ORD", 18, 30, VuelosB.vuelosB1, aeropuertos)
-    compararSalida("B2", "DFW", "ORD", 15, 0, VuelosB.vuelosB2, aeropuertos)
-    compararSalida("B3", "DFW", "ORD", 12, 0, VuelosB.vuelosB3, aeropuertos)
+  println("\n// Dataset B1 (40 vuelos):")
+  compararSalida("B1-1", "DFW", "ORD", 18, 30, VuelosB.vuelosB1, aeropuertos)
+  compararSalida("B1-2", "DFW", "DCA", 16, 0, VuelosB.vuelosB1, aeropuertos)
+  compararSalida("B1-3", "ORD", "LAX", 20, 0, VuelosB.vuelosB1, aeropuertos)
+  
+  println("\n// Dataset B2 (40 vuelos):")
+  compararSalida("B2-1", "DFW", "ORD", 17, 30, VuelosB.vuelosB2, aeropuertos)
+  compararSalida("B2-2", "DFW", "DCA", 15, 30, VuelosB.vuelosB2, aeropuertos)
+  compararSalida("B2-3", "ATL", "SEA", 19, 0, VuelosB.vuelosB2, aeropuertos)
+  
+  println("\n// Dataset B3 (40 vuelos):")
+  compararSalida("B3-1", "DFW", "ORD", 18, 0, VuelosB.vuelosB3, aeropuertos)
+  compararSalida("B3-2", "DFW", "DCA", 16, 30, VuelosB.vuelosB3, aeropuertos)
+  compararSalida("B3-3", "ORD", "MIA", 21, 30, VuelosB.vuelosB3, aeropuertos)
   }
 
   def benchmarkSalidaC(): Unit = {
-    println("\n// Dataset C (100 vuelos):")
-    compararSalida("C1", "ORD", "TPA", 18, 30, VuelosC.vuelosC1, aeropuertos)
-    compararSalida("C2", "ORD", "TPA", 15, 0, VuelosC.vuelosC2, aeropuertos)
-    compararSalida("C3", "ORD", "TPA", 12, 0, VuelosC.vuelosC3, aeropuertos)
-  }
-
-  def benchmarkSalidaD(): Unit = {
-    println("\n// Dataset D (500 vuelos) - ⚠️ PUEDE AGOTAR MEMORIA:")
-    compararSalida("D1", "ORD", "LAX", 18, 30, VuelosD.vuelosD1, aeropuertos)
-    compararSalida("D2", "ORD", "LAX", 15, 0, VuelosD.vuelosD2, aeropuertos)
-    compararSalida("D3", "ORD", "LAX", 12, 0, VuelosD.vuelosD3, aeropuertos)
+  println("\n// Dataset C1 (100 vuelos):")
+  compararSalida("C1-1", "ORD", "TPA", 18, 30, VuelosC.vuelosC1, aeropuertos)
+  compararSalida("C1-2", "DFW", "MIA", 16, 0, VuelosC.vuelosC1, aeropuertos)
+  compararSalida("C1-3", "ATL", "LAX", 20, 0, VuelosC.vuelosC1, aeropuertos)
+  
+  println("\n// Dataset C2 (100 vuelos):")
+  compararSalida("C2-1", "ORD", "TPA", 17, 30, VuelosC.vuelosC2, aeropuertos)
+  compararSalida("C2-2", "LAX", "JFK", 15, 30, VuelosC.vuelosC2, aeropuertos)
+  compararSalida("C2-3", "SEA", "MIA", 19, 0, VuelosC.vuelosC2, aeropuertos)
+  
+  println("\n// Dataset C3 (100 vuelos):")
+  compararSalida("C3-1", "ORD", "TPA", 18, 0, VuelosC.vuelosC3, aeropuertos)
+  compararSalida("C3-2", "DFW", "SEA", 16, 30, VuelosC.vuelosC3, aeropuertos)
+  compararSalida("C3-3", "ATL", "SFO", 21, 30, VuelosC.vuelosC3, aeropuertos)
   }
 }
