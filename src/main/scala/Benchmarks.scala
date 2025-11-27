@@ -187,24 +187,54 @@ object Benchmarks {
   }
 
   def benchmarkTiempoA(): Unit = {
-    println("\n// Dataset A (15 vuelos) — Tiempo:")
-    compararTiempo("A1-T", "HOU", "BNA", VuelosA.vuelosA1, aeropuertos)
-    compararTiempo("A2-T", "HOU", "BNA", VuelosA.vuelosA2, aeropuertos)
-    compararTiempo("A3-T", "HOU", "BNA", VuelosA.vuelosA3, aeropuertos)
+    println("\n// Dataset A1 (15 vuelos):")
+    compararTiempo("A1-1", "HOU", "MSY", VuelosA.vuelosA1, aeropuertos)
+    compararTiempo("A1-2", "MSY", "BNA", VuelosA.vuelosA1, aeropuertos)
+    compararTiempo("A1-3", "DFW", "ORD", VuelosA.vuelosA1, aeropuertos)
+    
+    println("\n// Dataset A2 (15 vuelos):")
+    compararTiempo("A2-1", "DFW", "ORD", VuelosA.vuelosA2, aeropuertos)
+    compararTiempo("A2-2", "SFO", "BNA", VuelosA.vuelosA2, aeropuertos)
+    compararTiempo("A2-3", "PHX", "LAX", VuelosA.vuelosA2, aeropuertos)
+    
+    println("\n// Dataset A3 (15 vuelos):")
+    compararTiempo("A3-1", "MIA", "HOU", VuelosA.vuelosA3, aeropuertos)
+    compararTiempo("A3-2", "LAX", "MIA", VuelosA.vuelosA3, aeropuertos)
+    compararTiempo("A3-3", "DFW", "SFO", VuelosA.vuelosA3, aeropuertos)
   }
 
   def benchmarkTiempoB(): Unit = {
-    println("\n// Dataset B (40 vuelos) — Tiempo:")
-    compararTiempo("B1-T", "DFW", "ORD", VuelosB.vuelosB1, aeropuertos)
-    compararTiempo("B2-T", "DFW", "ORD", VuelosB.vuelosB2, aeropuertos)
-    compararTiempo("B3-T", "DFW", "ORD", VuelosB.vuelosB3, aeropuertos)
+    println("\n// Dataset B1 (40 vuelos):")
+    compararTiempo("B1-1", "DFW", "ORD", VuelosB.vuelosB1, aeropuertos)
+    compararTiempo("B1-2", "DFW", "DCA", VuelosB.vuelosB1, aeropuertos)
+    compararTiempo("B1-3", "ORD", "LAX", VuelosB.vuelosB1, aeropuertos)
+    
+    println("\n// Dataset B2 (40 vuelos):")
+    compararTiempo("B2-1", "DFW", "ORD", VuelosB.vuelosB2, aeropuertos)
+    compararTiempo("B2-2", "DFW", "DCA", VuelosB.vuelosB2, aeropuertos)
+    compararTiempo("B2-3", "ATL", "SEA", VuelosB.vuelosB2, aeropuertos)
+    
+    println("\n// Dataset B3 (40 vuelos):")
+    compararTiempo("B3-1", "DFW", "ORD", VuelosB.vuelosB3, aeropuertos)
+    compararTiempo("B3-2", "DFW", "DCA", VuelosB.vuelosB3, aeropuertos)
+    compararTiempo("B3-3", "ORD", "MIA", VuelosB.vuelosB3, aeropuertos)
   }
 
   def benchmarkTiempoC(): Unit = {
-    println("\n// Dataset C (100 vuelos) — Tiempo:")
-    compararTiempo("C1-T", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
-    compararTiempo("C2-T", "ORD", "TPA", VuelosC.vuelosC2, aeropuertos)
-    compararTiempo("C3-T", "ORD", "TPA", VuelosC.vuelosC3, aeropuertos)
+    println("\n// Dataset C1 (100 vuelos):")
+    compararTiempo("C1-1", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
+    compararTiempo("C1-2", "DFW", "MIA", VuelosC.vuelosC1, aeropuertos)
+    compararTiempo("C1-3", "ATL", "LAX", VuelosC.vuelosC1, aeropuertos)
+    
+    println("\n// Dataset C2 (100 vuelos):")
+    compararTiempo("C2-1", "ORD", "TPA", VuelosC.vuelosC2, aeropuertos)
+    compararTiempo("C2-2", "LAX", "JFK", VuelosC.vuelosC2, aeropuertos)
+    compararTiempo("C2-3", "SEA", "MIA", VuelosC.vuelosC2, aeropuertos)
+    
+    println("\n// Dataset C3 (100 vuelos):")
+    compararTiempo("C3-1", "ORD", "TPA", VuelosC.vuelosC3, aeropuertos)
+    compararTiempo("C3-2", "DFW", "SEA", VuelosC.vuelosC3, aeropuertos)
+    compararTiempo("C3-3", "ATL", "SFO", VuelosC.vuelosC3, aeropuertos)
   }
 
   def benchmarkTiempoD(): Unit = {

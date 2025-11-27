@@ -1,5 +1,3 @@
-
-
 val itsTiempoCursoParalelo = itinerariosTiempo(vuelosCurso,aeropuertosCurso)
 val itst1 = itsTiempoCursoParalelo("MID", "SVCS")
 val itst2 = itsTiempoCursoParalelo("CLO", "SVCS")
