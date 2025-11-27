@@ -1,8 +1,10 @@
 import Datos._
 import helpers._
 import common._
+
 import scala.collection.mutable.HashMap
 import math._
+import scala.annotation.tailrec
 
 package object Itinerarios {
   def itinerarios(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
@@ -21,81 +23,51 @@ package object Itinerarios {
 
     (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1))
   }
+  
+  
+  def itinerariosBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
+    def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
-  def itinerarioSalida(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
-
-
-
-    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
-
-    def buscar(cod1: String, cod2: String, HL: Int, ML: Int): Itinerario = {
-      val todosItinerarios = buscarItinerarios(cod1, cod2)
-      val horaCita = aMinutos(HL, ML)
-
-      //filtro itinerarios que llegan a tiempo
-      val itinerariosValidos = todosItinerarios.filter { itinerario =>
-        horaLlegada(itinerario) <= horaCita
-      }
-
-      //si no hay retorno vacio
-      if (itinerariosValidos.isEmpty) Nil
-      else {
-        //me quedo con el que sale mas tarde
-        itinerariosValidos.maxBy(horaSalida)
-      }
-    }
-
-    (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
-  }
-
-  def itinerariosEscalas(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
-    //Busco todos los itinerarios 
-    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
+      val todosItsFunc = itinerarios(vuelos, aeropuertos)
 
 
-  (c1: String, c2: String) => {
-     //Obtengo todos los itinerarios
-     val todosLosItinerarios = buscarItinerarios(c1, c2)
+      def buscar(actual: String, destino: String): List[Itinerario] = {
 
-     if (todosLosItinerarios.isEmpty) {
-      Nil
-     } else {
-      //Me quedo con el itinerario con menos escalas
-      val minEscalas = todosLosItinerarios.map(totalEscalas).min
-      //Filtro los itinerarios con menos escalas
-      todosLosItinerarios.filter(it => totalEscalas(it) == minEscalas)
-     }
-    }
-  }
-
-
-
-  def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
-
-    val todosItsFunc = itinerarios(vuelos, aeropuertos)
-
-
-    def buscar(actual: String, destino: String): List[Itinerario] = {
-
-      val todosIts = todosItsFunc(actual, destino)
-
-      val todosItsAire = todosIts.map(totalAire)
-
-      var its_candidatos : List[Itinerario] = List()
-      var aire_candidato : Double = Double.MaxValue
-
-      for ((itAire, idx) <- todosItsAire.zipWithIndex) {
-        if (itAire < aire_candidato) {
-          its_candidatos = List(todosIts(idx))
-          aire_candidato = itAire
-        } else if (itAire == aire_candidato) {
-          its_candidatos = its_candidatos :+ todosIts(idx)
+        def findMins(l: List[(Double, Itinerario)], min_candidate: Double, its_candidate: List[Itinerario]): List[Itinerario] = {
+          if (l.isEmpty) {
+            its_candidate
+          } else if (l.head._1 < min_candidate) {
+            findMins(l.tail, l.head._1, List(l.head._2))
+          } else if (l.head._1 == min_candidate) {
+            findMins(l.tail, min_candidate, its_candidate :+ l.head._2)
+          } else {
+            findMins(l.tail, min_candidate, its_candidate)
+          }
         }
+
+        val todosIts = todosItsFunc(actual, destino)
+
+        val todosObjIts = todosIts.map(it => (objective_function(it), it))
+        findMins(todosObjIts, Double.MaxValue, List())
+
       }
-      its_candidatos
+
+
+      buscar
     }
-    buscar
+    inner
   }
+
+
+
+  val itinerarioTiempo = itinerariosBase(objectivoTiempo, 3)
+  val itinerariosEscalas = itinerariosBase(objectivoEscalas)
+  val itinerariosAire = itinerariosBase(objectivoAire)
+  val itinerariosSalida =
+    (vuelos: List[Vuelo], aeropuertos: List[Aeropuerto], HS: Int, MS: Int)
+    => itinerariosBase(objectivoSalida(HS, MS))(vuelos, aeropuertos)
+
+
 
 }
 

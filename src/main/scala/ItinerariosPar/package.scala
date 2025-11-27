@@ -61,9 +61,7 @@ package object ItinerariosPar {
 
           if (todosLosItinerarios.isEmpty) {
             Nil
-          }
-
-          if (top_k == 0) {
+          } else if (top_k == 0) {
             val todosLosItinerariosPar = todosLosItinerarios.par
             val valor_optimo = todosLosItinerariosPar.map(objective_function).min
             todosLosItinerariosPar.filter(it => objective_function(it) == valor_optimo).toList
