@@ -128,14 +128,98 @@ object Benchmarks {
 
   def compararEscalas(dataset: String, origen: String, destino: String,
                       vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): Unit = {
-    // TODO: Implementar cuando tengas itinerariosEscalas e itinerariosEscalasPar
-    println(f"$dataset%-12s | $origen→$destino%-8s | TODO")
+    if (vuelos.isEmpty) {
+      println(f"$dataset%-12s | $origen→$destino%-8s | ${0}%-6d | ${0}%-12d | ${0.0}%.3f | ${0.0}%.3f | N/A")
+      return
+    }
+
+    val its    = itinerariosEscalas(vuelos, aeropuertos)
+    val itsPar = itinerariosEscalasPar(vuelos, aeropuertos)
+
+    var resultSeq: List[Itinerario] = Nil
+    var resultPar: List[Itinerario] = Nil
+
+    val timeSeq = standardConfig measure {
+      resultSeq = its(origen, destino)
+    }
+
+    val timePar = standardConfig measure {
+      resultPar = itsPar(origen, destino)
+    }
+
+    val timeSeqMs = timeSeq.value * 1000.0
+    val timeParMs = timePar.value * 1000.0
+    val speedup = if (timeParMs == 0.0) Double.PositiveInfinity else timeSeqMs / timeParMs
+    val correct = resultSeq.toSet == resultPar.toSet
+
+    println(f"$dataset%-12s | $origen→$destino%-8s | ${vuelos.length}%-6d | ${resultSeq.length}%-12d | $timeSeqMs%12.3f | $timeParMs%10.3f | $speedup%6.2fx")
+
+    if (!correct) {
+      println("⚠️  ERROR: Los resultados secuencial y paralelo no coinciden!")
+    }
   }
 
   def benchmarkEscalasCurso(): Unit = {
     println("\n// Ejemplos del curso:")
     compararEscalas("Curso-1", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
-    // ... etc
+    compararEscalas("Curso-2", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
+    compararEscalas("Curso-3", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
+    compararEscalas("Curso-4", "MAD", "SVO", vuelosCurso, aeropuertosCurso)
+  }
+
+  def benchmarkEscalasA(): Unit = {
+    println("\n// Dataset A (15 vuelos):")
+    // A1
+    compararEscalas("A1-1", "HOU", "MSY", VuelosA.vuelosA1, aeropuertos)
+    compararEscalas("A1-2", "MSY", "BNA", VuelosA.vuelosA1, aeropuertos)
+    compararEscalas("A1-3", "DFW", "ORD", VuelosA.vuelosA1, aeropuertos)
+    // A2
+    compararEscalas("A2-1", "DFW", "ORD", VuelosA.vuelosA2, aeropuertos)
+    compararEscalas("A2-2", "SFO", "BNA", VuelosA.vuelosA2, aeropuertos)
+    compararEscalas("A2-3", "PHX", "LAX", VuelosA.vuelosA2, aeropuertos)
+    // A3
+    compararEscalas("A3-1", "MIA", "HOU", VuelosA.vuelosA3, aeropuertos)
+    compararEscalas("A3-2", "LAX", "MIA", VuelosA.vuelosA3, aeropuertos)
+    compararEscalas("A3-3", "DFW", "SFO", VuelosA.vuelosA3, aeropuertos)
+  }
+
+  def benchmarkEscalasB(): Unit = {
+    println("\n// Dataset B (40 vuelos):")
+    // B1
+    compararEscalas("B1-1", "DFW", "ORD", VuelosB.vuelosB1, aeropuertos)
+    compararEscalas("B1-2", "DFW", "DCA", VuelosB.vuelosB1, aeropuertos)
+    compararEscalas("B1-3", "ORD", "LAX", VuelosB.vuelosB1, aeropuertos)
+    // B2
+    compararEscalas("B2-1", "DFW", "ORD", VuelosB.vuelosB2, aeropuertos)
+    compararEscalas("B2-2", "DFW", "DCA", VuelosB.vuelosB2, aeropuertos)
+    compararEscalas("B2-3", "ATL", "SEA", VuelosB.vuelosB2, aeropuertos)
+    // B3
+    compararEscalas("B3-1", "DFW", "ORD", VuelosB.vuelosB3, aeropuertos)
+    compararEscalas("B3-2", "DFW", "DCA", VuelosB.vuelosB3, aeropuertos)
+    compararEscalas("B3-3", "ORD", "MIA", VuelosB.vuelosB3, aeropuertos)
+  }
+
+  def benchmarkEscalasC(): Unit = {
+    println("\n// Dataset C (100 vuelos):")
+    // C1
+    compararEscalas("C1-1", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
+    compararEscalas("C1-2", "DFW", "MIA", VuelosC.vuelosC1, aeropuertos)
+    compararEscalas("C1-3", "ATL", "LAX", VuelosC.vuelosC1, aeropuertos)
+    // C2
+    compararEscalas("C2-1", "ORD", "TPA", VuelosC.vuelosC2, aeropuertos)
+    compararEscalas("C2-2", "LAX", "JFK", VuelosC.vuelosC2, aeropuertos)
+    compararEscalas("C2-3", "SEA", "MIA", VuelosC.vuelosC2, aeropuertos)
+    // C3
+    compararEscalas("C3-1", "ORD", "TPA", VuelosC.vuelosC3, aeropuertos)
+    compararEscalas("C3-2", "DFW", "SEA", VuelosC.vuelosC3, aeropuertos)
+    compararEscalas("C3-3", "ATL", "SFO", VuelosC.vuelosC3, aeropuertos)
+  }
+
+  def benchmarkEscalasD(): Unit = {
+    println("\n// Dataset D (500 vuelos) - ⚠️ PUEDE AGOTAR MEMORIA:")
+    compararEscalas("D1", "ORD", "LAX", VuelosD.vuelosD1, aeropuertos)
+    compararEscalas("D2", "ORD", "LAX", VuelosD.vuelosD2, aeropuertos)
+    compararEscalas("D3", "ORD", "LAX", VuelosD.vuelosD3, aeropuertos)
   }
 
   // ============================================

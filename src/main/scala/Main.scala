@@ -25,7 +25,9 @@ object Main extends App {
         println("⚠️  Función no implementada aún")
         
       case "escalas" | "e" =>
-        println("⚠️  Función no implementada aún")
+        Benchmarks.imprimirEncabezado("ITINERARIOS_ESCALAS vs ITINERARIOS_ESCALAS_PAR")
+        ejecutarDatasets(datasets, ejecutarEscalas)
+        Benchmarks.imprimirPie()
         
       case "aire" | "a" =>
         println("⚠️  Función no implementada aún")
@@ -58,6 +60,22 @@ object Main extends App {
         Benchmarks.benchmarkItinerariosA()
         Benchmarks.benchmarkItinerariosB()
         Benchmarks.benchmarkItinerariosC()
+      case _ => println(s"⚠️  Dataset desconocido: $dataset")
+    }
+  }
+
+  def ejecutarEscalas(dataset: String): Unit = {
+    dataset.toLowerCase match {
+      case "curso" | "c" => Benchmarks.benchmarkEscalasCurso()
+      case "a" | "a1" | "a2" | "a3" => Benchmarks.benchmarkEscalasA()
+      case "b" | "b1" | "b2" | "b3" => Benchmarks.benchmarkEscalasB()
+      case "c" | "c1" | "c2" | "c3" => Benchmarks.benchmarkEscalasC()
+      case "d" | "d1" | "d2" | "d3" => Benchmarks.benchmarkEscalasD()
+      case "all" | "todos" =>
+        Benchmarks.benchmarkEscalasCurso()
+        Benchmarks.benchmarkEscalasA()
+        Benchmarks.benchmarkEscalasB()
+        Benchmarks.benchmarkEscalasC()
       case _ => println(s"⚠️  Dataset desconocido: $dataset")
     }
   }
@@ -131,7 +149,19 @@ object Main extends App {
             Benchmarks.imprimirPie()
           }
           
-        case "2" | "3" | "4" | "5" =>
+        case "3" =>
+          val datasets = seleccionarDatasets()
+          if (datasets.nonEmpty) {
+            Benchmarks.imprimirEncabezado("ITINERARIOS_ESCALAS vs ITINERARIOS_ESCALAS_PAR")
+            if (datasets.contains(1)) Benchmarks.benchmarkEscalasCurso()
+            if (datasets.contains(2)) Benchmarks.benchmarkEscalasA()
+            if (datasets.contains(3)) Benchmarks.benchmarkEscalasB()
+            if (datasets.contains(4)) Benchmarks.benchmarkEscalasC()
+            if (datasets.contains(5)) Benchmarks.benchmarkEscalasD()
+            Benchmarks.imprimirPie()
+          }
+          
+        case "2" | "4" | "5" =>
           println("\n⚠️  Esta función aún no está implementada.")
           
         case _ =>
