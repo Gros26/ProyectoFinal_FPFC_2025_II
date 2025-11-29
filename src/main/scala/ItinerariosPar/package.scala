@@ -51,6 +51,41 @@ package object ItinerariosPar {
     (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
   }
 
+  def itinerariosTiempoPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    val generarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+
+    def tiempoTotal(it: Itinerario): Int = {
+      if (it.isEmpty) 0
+      else {
+        val primero = it.head
+        val ultimo  = it.last
+
+        def aMinutos(h: Int, m: Int) = h * 60 + m
+
+        val salida  = aMinutos(primero.HS, primero.MS)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
+
+        if (llegada < salida) llegada += 24 * 60
+
+        llegada - salida
+      }
+    }
+
+    (cod1: String, cod2: String) => {
+      val todos = generarItinerariosPar(cod1, cod2)
+
+      val ordenados =
+        todos
+          .par
+          .map(it => (tiempoTotal(it), it))
+          .toList
+          .sortBy(_._1)
+          .map(_._2)
+
+      ordenados
+    }
+  }
 
   def itinerarioSalidaPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
 

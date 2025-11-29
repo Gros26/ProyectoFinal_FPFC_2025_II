@@ -12,9 +12,17 @@
 \usepackage{listings}
 \usepackage{xcolor}
 
-\title{ProyectoFinal FPFC}
-\author{Grosman Garcia}
-\date{November 2025}
+\title{%
+  Proyecto Final FPFC \\
+  \large \textbf{El problema de la planificación de vuelos}}
+  
+\author{
+    Sebastian Oviedo \\ \texttt{xxxx} \\
+    Juan Moreno \\ \texttt{xxxx} \\
+    Weis Paul \\ \texttt{xxxx} \\
+    Grosman Klein García Valencia \\ \texttt{2340247}
+}
+\date{Diciembre 2025}
 
 \begin{document}
 
@@ -176,9 +184,9 @@ def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]):
     (String, String) => List[Itinerario] = {
   val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
-  // Umbral mínimo para paralelizar y máxima profundidad de paralelismo
-  val UMBRAL_PAR     = 4       // solo paralelizar si hay al menos 4 vuelos
-  val MAX_PROF_PAR   = 2       // solo paralelizar en los 2 primeros niveles
+
+  val UMBRAL_PAR     = 4
+  val MAX_PROF_PAR   = 2
 
   def buscar(actual: String, destino: String, visitados: Set[String], 
       nivel: Int): List[Itinerario] = {
@@ -186,7 +194,6 @@ def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]):
     else {
       val vuelosDisponibles = vuelosPorOrigen(actual).filterNot(v => visitados(v.Dst))
 
-      // Si hay pocos vuelos o ya estamos muy profundo, usar secuencial
       if (vuelosDisponibles.size <= 1 || nivel >= MAX_PROF_PAR) {
         for {
           vuelo <- vuelosDisponibles
@@ -448,6 +455,567 @@ La función \texttt{itinerarios} calcula correctamente todos los itinerarios pos
 
 La versión paralela (\texttt{itinerariosPar}) comparte exactamente el mismo límite teórico: el paralelismo distribuye el trabajo entre varios núcleos y puede acelerar el cálculo, pero no reduce la cantidad total de itinerarios ni la memoria necesaria para representarlos. Si para una ruta determinada existen, por ejemplo, diez millones de itinerarios posibles, tanto la versión secuencial como la paralela necesitarán espacio para almacenar esos diez millones de resultados. La paralelización únicamente ayuda a calcularlos más rápido, pero no modifica la explosión combinatoria del problema ni resuelve la limitación de espacio. Este análisis muestra que, en problemas de enumeración exhaustiva, la paralelización tiene un alcance limitado y que, para instancias muy grandes, sería necesario considerar enfoques alternativos (por ejemplo, búsqueda de rutas óptimas sin enumerar todas las posibilidades).
 
+
+\section{Encontrando los itinerarios de menor tiempo total}
+
+Sea $f_T : (String \times String) \to List[Itinerario]$ la función que,
+dados dos códigos de aeropuerto $c_1$ y $c_2$, devuelve los \emph{tres
+itinerarios con menor tiempo total de viaje} entre dichos aeropuertos.
+Esta función se apoya en la función previamente demostrada
+\texttt{itinerarios}, que genera \emph{todos} los itinerarios posibles
+sin ciclos entre dos aeropuertos. Una vez generadas todas las rutas,
+\texttt{itinerariosTiempo} aplica un criterio de optimización basado en
+la duración total del itinerario, calculando el tiempo de viaje
+desde la salida del primer vuelo hasta la llegada del último vuelo,
+considerando incluso el cruce de medianoche.
+
+La implementación en Scala es la siguiente:
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosTiempo(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    val generarItinerarios = itinerarios(vuelos, aeropuertos)
+
+    def tiempoTotal(it: Itinerario): Int = {
+      if (it.isEmpty) 0
+      else {
+        val primero = it.head
+        val ultimo  = it.last
+
+        def aMinutos(h: Int, m: Int) = h * 60 + m
+        val salida  = aMinutos(primero.HS, primero.MS)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
+
+        if (llegada < salida)
+          llegada += 24 * 60
+
+        llegada - salida
+      }
+    }
+
+    (cod1: String, cod2: String) => {
+      val todos = generarItinerarios(cod1, cod2)
+      val ordenados = todos.sortBy(tiempoTotal)
+      ordenados
+    }
+}
+\end{minted}
+
+\subsection{Demostración}
+
+La demostración de correctitud se divide en dos partes:
+primero probamos que la función auxiliar \texttt{tiempoTotal} computa correctamente el tiempo total de un itinerario,
+y luego probamos que \texttt{itinerariosTiempo} usa correctamente las funciones \texttt{itinerarios} y \texttt{tiempoTotal} para producir las tres mejores rutas.
+
+\subsubsection{Parte 1: Correctitud de la función auxiliar \texttt{tiempoTotal}}
+
+Sea
+\[
+\tau : Itinerario \rightarrow \mathbb{N}
+\]
+la función matemática que asigna a cada itinerario su duración total en minutos.
+
+Para un itinerario de longitud $k$:
+\[
+I = \langle v_1, v_2, \dots, v_k \rangle,
+\]
+definimos:
+
+\[
+salida(I) = 60\cdot v_1.HS + v_1.MS,
+\qquad
+llegada(I) = 60\cdot v_k.HL + v_k.ML.
+\]
+
+Y la duración total es:
+
+\[
+\tau(I)=
+\begin{cases}
+llegada(I)-salida(I), & \text{si la llegada ocurre el mismo día},\\[6pt]
+llegada(I)+1440 - salida(I), & \text{si la llegada ocurre al día siguiente}.
+\end{cases}
+\]
+
+\subsubsection*{Demostración por inducción estructural sobre la longitud del itinerario}
+
+Sea $|I|$ la cantidad de vuelos en el itinerario $I$.
+
+\paragraph{Caso base: $|I| = 0$}
+
+Un itinerario vacío representa ausencia de vuelos.
+La definición matemática establece:
+
+\[
+\tau(\langle \;\rangle) = 0.
+\]
+
+Y la implementación:
+
+\begin{minted}[fontsize=\small]{scala}
+if (it.isEmpty) 0
+\end{minted}
+
+Por lo tanto:
+
+\[
+tiempoTotal(\langle\;\rangle) = \tau(\langle\;\rangle).
+\]
+
+\paragraph{Paso inductivo}
+
+Supongamos que para un itinerario de longitud $k$ se cumple:
+
+\[
+tiempoTotal(I) = \tau(I).
+\]
+
+Debemos probarlo para un itinerario de longitud $k+1$:
+
+\[
+I' = \langle v_1, v_2, \dots, v_{k+1} \rangle.
+\]
+
+La implementación calcula:
+
+\[
+salida = 60\cdot v_1.HS + v_1.MS,
+\qquad
+llegada = 60\cdot v_{k+1}.HL + v_{k+1}.ML.
+\]
+
+El único caso especial ocurre si $llegada < salida$, donde la implementación suma $24\cdot 60$ minutos.
+Este comportamiento coincide exactamente con la definición matemática de $\tau$.
+
+Por tanto:
+
+\[
+tiempoTotal(I')=\tau(I').
+\]
+
+\paragraph{Conclusión de la Parte 1}
+
+Por inducción estructural:
+
+\[
+\forall I,\qquad tiempoTotal(I)=\tau(I).
+\]
+
+La función auxiliar es correcta.
+
+\subsubsection{Parte 2: Correctitud de la función principal \texttt{itinerariosTiempo}}
+
+Recordemos que en la sección previa ya se demostró que:
+
+\[
+itinerarios(vuelos,aeropuertos)(c_1,c_2)=f(c_1,c_2),
+\]
+
+donde $f(c_1,c_2)$ es el conjunto de todos los itinerarios válidos sin ciclos.
+
+Sea entonces:
+
+\[
+T = f(c_1,c_2).
+\]
+
+La implementación de \texttt{itinerariosTiempo} aplica:
+
+\[
+itinerariosTiempo(vuelos,aeropuertos)(c_1,c_2)
+= sortBy(\tau)(T).
+\]
+
+\subsubsection*{Teorema 1: Correctitud de \texttt{itinerariosTiempo}}
+
+\[
+itinerariosTiempo(vuelos,aeropuertos)(c_1,c_2)
+= \text{los tres itinerarios de menor tiempo total en } f(c_1,c_2).
+\]
+
+\paragraph{Demostración}
+
+\textbf{1. Correctitud en la generación de itinerarios}
+
+\[
+itinerarios(vuelos,aeropuertos)(c_1,c_2)=f(c_1,c_2).
+\]
+
+\textbf{2. Correctitud en el cálculo de tiempo}
+
+Por inducción estructural:
+
+\[
+tiempoTotal(I)=\tau(I).
+\]
+
+\textbf{3. Correctitud en la selección de los mínimos}
+
+La función \texttt{sortBy} en Scala garantiza un orden total según $\tau$:
+
+\[
+sortBy(\tau)(T)=\text{lista no decreciente según }\tau.
+\]
+
+\paragraph{Conclusión}
+
+\[
+itinerariosTiempo(vuelos,aeropuertos)(c_1,c_2) \text{, devuelve los 3 itinerarios válidos con menor tiempo total de viaje}.
+\]
+
+
+La función combina la correctitud de itinerarios (ya demostrada por inducción estructural) con la evaluación correcta del tiempo total y una selección estricta de los valores mínimos.
+Con ello, queda completamente demostrada su correctitud funcional y matemática.
+
+\subsection{Equivalencia Algorítmica con la Versión Paralela}
+\subsubsection{Implementación Paralela}
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosTiempoPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    val generarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+
+    def tiempoTotal(it: Itinerario): Int = {
+      if (it.isEmpty) 0
+      else {
+        val primero = it.head
+        val ultimo  = it.last
+
+        def aMinutos(h: Int, m: Int) = h * 60 + m
+
+        val salida  = aMinutos(primero.HS, primero.MS)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
+
+        if (llegada < salida) llegada += 24 * 60
+
+        llegada - salida
+      }
+    }
+
+    (cod1: String, cod2: String) => {
+      val todos = generarItinerariosPar(cod1, cod2)
+
+      val ordenados =
+        todos
+          .par
+          .map(it => (tiempoTotal(it), it))
+          .toList
+          .sortBy(_._1)
+          .map(_._2)
+
+      ordenados
+    }
+  }
+\end{minted}
+
+\subsubsection{Diferencias con la Versión Secuencial}
+
+Las dos versiones de la función ---la secuencial \texttt{itinerariosTiempo} y la paralela \texttt{itinerariosTiempoPar}--- 
+comparten la misma estructura lógica: ambas generan primero el conjunto completo de itinerarios válidos utilizando,
+respectivamente, \texttt{itinerarios} y \texttt{itinerariosPar}, y posteriormente aplican la misma métrica de tiempo 
+total para ordenar y seleccionar los tres mejores itinerarios.
+
+La diferencia entre ambas versiones reside únicamente en la estrategia computacional empleada para procesar la lista
+de itinerarios:
+\begin{itemize}
+    \item La versión secuencial procesa los itinerarios de forma lineal.
+    \item La versión paralela convierte la colección en una estructura paralela mediante \texttt{.par} y distribuye
+          el cálculo del tiempo total entre múltiples hilos.
+\end{itemize}
+
+En ningún caso la versión paralela altera la semántica del algoritmo: no agrega ni elimina itinerarios, 
+no modifica la definición de tiempo total y no altera el orden relativo una vez que la lista vuelve a ser secuencializada
+con \texttt{toList} antes de aplicar \texttt{sortBy}. Por tanto, ambas funciones realizan exactamente
+las mismas transformaciones sobre los mismos datos de entrada.
+
+\begin{theorem}[Equivalencia Algorítmica]
+Para todo par de aeropuertos $c_1, c_2 \in String$ se cumple que:
+\[
+\text{itinerariosTiempoPar}(\text{vuelos}, \text{aeropuertos})(c_1, c_2)
+=
+\text{itinerariosTiempo}(\text{vuelos}, \text{aeropuertos})(c_1, c_2).
+\]
+\end{theorem}
+
+\begin{proof}
+La demostración se basa en dos observaciones fundamentales:
+
+\textbf{1. Equivalencia en la generación de itinerarios.}
+En la sección anterior se demostró que:
+\[
+\text{itinerariosPar}(\text{vuelos}, \text{aeropuertos})(c_1, c_2)
+=
+\text{itinerarios}(\text{vuelos}, \text{aeropuertos})(c_1, c_2),
+\]
+es decir, ambas funciones producen exactamente el mismo conjunto de itinerarios válidos sin ciclos.
+
+\textbf{2. Equivalencia en el procesamiento posterior.}
+Una vez generado el conjunto de itinerarios $T$, ambas funciones aplican exactamente la misma transformación:
+\[
+sortBy(\tau)(T)\bigr,
+\]
+donde $\tau$ es la función de tiempo total demostrada correcta en la sección anterior.
+
+La versión paralela distribuye el cálculo de los pares \((\tau(I),I)\) entre múltiples hilos, pero:
+\begin{itemize}
+    \item no altera los elementos de $T$,
+    \item no altera los valores calculados por $\tau$,
+    \item y aplica la ordenación únicamente después de convertir nuevamente la estructura paralela en una lista secuencial.
+\end{itemize}
+
+Dado que ambas funciones reciben el mismo conjunto $T$ y aplican exactamente la misma función matemática a $T$,
+el resultado final debe ser necesariamente idéntico para ambas.
+
+\textbf{Por lo tanto}:  
+\[
+\text{itinerariosTiempoPar}(c_1,c_2)
+=
+\text{itinerariosTiempo}(c_1,c_2).
+\]
+
+\end{proof}
+
+\subsubsection{Demostración de Equivalencia entre \texttt{itinerariosTiempo} y \texttt{itinerariosTiempoPar}}
+
+Sea $f_T(c_1,c_2)$ la función que retorna los tres itinerarios de menor tiempo total entre los aeropuertos $c_1$ y $c_2$ usando la versión secuencial:
+
+\[
+f_T(c_1,c_2) = sortBy(\tau)(f(c_1,c_2))
+\]
+
+Sea $f_T^{par}(c_1,c_2)$ la versión paralela:
+
+\[
+f_T^{par}(c_1,c_2) = 
+\left(
+  \text{map}_\parallel(\tau)(f^{par}(c_1,c_2))
+\right)
+\]
+
+donde $f^{par}$ es la versión paralela ya demostrada equivalente a $f$:
+
+\[
+\forall c_1,c_2:\quad f^{par}(c_1,c_2)=f(c_1,c_2)
+\]
+
+Nuestro objetivo es demostrar el siguiente teorema.
+
+\paragraph{Teorema 4 (Equivalencia Algorítmica)}
+
+\[
+\forall c_1,c_2 \in String:\quad 
+itinerariosTiempoPar(vuelos,aeropuertos)(c_1,c_2)
+=
+itinerariosTiempo(vuelos,aeropuertos)(c_1,c_2)
+\]
+
+\subsubsection*{Demostración}
+
+La demostración se divide en tres pasos.
+
+\paragraph{1. Equivalencia en la generación de itinerarios}
+
+Por el Teorema previo sobre \texttt{itinerariosPar}:
+
+\[
+f^{par}(c_1,c_2)=f(c_1,c_2)
+\]
+
+Por lo tanto, ambas funciones parten exactamente del mismo conjunto:
+
+\[
+T = f(c_1,c_2) = f^{par}(c_1,c_2)
+\]
+
+\paragraph{2. Equivalencia en el cálculo de tiempos}
+
+\texttt{itinerariosTiempoPar} aplica:
+
+\[
+T_\tau^{par} = \{ (\tau(I), I) \mid I \in T \}
+\]
+
+mientras que \texttt{itinerariosTiempo} aplica:
+
+\[
+T_\tau = \tau(T) = \{ \tau(I) \mid I \in T \}
+\]
+
+La diferencia es únicamente que \texttt{itinerariosTiempoPar} aplica \texttt{map} en paralelo:
+
+\[
+map_\parallel(\tau)(T) = map(\tau)(T)
+\]
+
+por lo que:
+
+\[
+T_\tau^{par} = T_\tau
+\]
+
+\paragraph{3. Equivalencia en la selección de mínimos}
+
+Ambas funciones aplican:
+
+\[
+sortBy(\tau)(T)
+\]
+
+La versión paralela hace el cálculo de tiempos en paralelo, pero la ordenación sigue siendo secuencial, por lo que:
+
+\[
+sortBy(\tau)(T_\tau^{par}) = sortBy(\tau)(T_\tau)
+\]
+
+Por lo tanto:
+
+\[
+sortBy(\tau)(T)
+=
+sortBy(\tau)(T)
+\]
+
+\paragraph{Conclusión}
+
+\[
+itinerariosTiempoPar(c_1,c_2) = itinerariosTiempo(c_1,c_2)
+\]
+
+Es decir,\textbf{ La versión paralela produce exactamente los mismos tres itinerarios óptimos que la versión secuencial.} La única diferencia entre ambas es el \emph{tiempo de cómputo}, no el resultado matemático.
+
+\subsection{Analisis comparativo de las versiones}
+
+\begin{longtable}{lcccccc}
+\caption{Comparación de desempeño: versión secuencial vs paralela (itinerariostiempo)
+} \\
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endfirsthead
+
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{7}{r}{\small Continúa en la siguiente página} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+Curso-T1 & MID--SVCS & 16  & 1 & 4,820 & 68,450 & 0.07 \\
+Curso-T2 & MID--SVCS & 16  & 0 & 13,160 & 75,150 & 0.18 \\
+Curso-T3 & CLO--SVO & 16  & 4 & 23,420 & 310,740 & 0.08 \\
+Curso-T4 & CLO--MEX & 16  & 2 & 13,340 & 160,450 & 0.08 \\
+Curso-T5 & CTG--PTY & 16  & 2 & 6,820 & 127,240 & 0.05 \\
+\midrule
+
+A1-1 & HOU--MSY & 15  & 5 & 52.980 & 438.800 & 0.12 \\
+A1-2 & MSY--BNA & 15  & 1 & 39.530 & 188.800 & 0.21 \\
+A1-3 & DFW--ORD & 15  & 1 & 7.180  & 134.100  & 0.05 \\
+\midrule
+
+A2-1 & DFW--ORD & 15  & 2 & 10.140 & 186.960 & 0.05 \\
+A2-2 & SFO--BNA & 15  & 0 & 12.710 & 91.060 & 0.14 \\
+A2-3 & PHX--LAX & 15  & 1 & 16.670 & 160.340 & 0.10 \\
+\midrule
+
+A3-1 & MIA--HOU & 15  & 1 & 44.310 & 65.300 & 0.68 \\
+A3-2 & LAX--MIA & 15  & 1 & 12.710 & 91.060 & 0.14 \\
+A3-3 & DFW--SFO & 15  & 1 & 16.670 & 160.340 & 0.10 \\
+\midrule
+
+B1-1 & DFW--ORD & 40  & 16 & 28.550 & 245.180 & 0.12 \\
+B1-2 & DFW--DCA & 40  & 29 & 52.760 & 444.010 & 0.12 \\
+B1-3 & ORD--LAX & 40  & 3  & 6.560 & 94.000 & 0.07 \\
+\midrule
+
+B2-1 & DFW--ORD & 40  & 9  & 4.250 & 118.460 & 0.04 \\
+B2-2 & DFW--DCA & 40  & 9  & 24.880 & 146.210 & 0.17 \\
+B2-3 & ATL--SEA & 40  & 0  & 4.930 & 25.680 & 0.19 \\
+\midrule
+
+B3-1 & DFW--ORD & 40  & 6  & 4.510 & 74.740 & 0.06 \\
+B3-2 & DFW--DCA & 40  & 12 & 18.780 & 109.500 & 0.17 \\
+B3-3 & ORD--MIA & 40  & 1  & 11.500 & 80.600 & 0.14 \\
+\midrule
+
+C1-1 & ORD--TPA & 100 & 1470 & 4740.100 & 5318.740 & 0.89 \\
+C1-2 & DFW--MIA & 100 & 1369 & 5187.610 & 3224.150 & 1.61 \\
+C1-3 & ATL--LAX & 100 & 676  & 1786.770 & 1315.690 & 1.36 \\
+\midrule
+
+C2-1 & ORD--TPA & 100 & 246  & 2473.940 & 1639.390 & 1.51 \\
+C2-2 & LAX--JFK & 100 & 0    & 780.520 & 663.680 & 1.18 \\
+C2-3 & SEA--MIA & 100 & 1605 & 3012.420 & 2006.030 & 1.50 \\
+\midrule
+
+C3-1 & ORD--TPA & 100 & 2944 & 4650.010 & 1791.530 & 2.60 \\
+C3-2 & DFW--SEA & 100 & 236  & 3906.890 & 1143.820 & 3.42 \\
+C3-3 & ATL--SFO & 100 & 2939 & 2887.150 & 1203.730 & 2.40 \\
+\end{longtable}
+
+La tabla anterior presenta el tiempo de ejecución de la versión secuencial y la versión paralela de la función
+\texttt{itinerariosTiempo} para distintos conjuntos de datos (Curso, A, B y C), variando tanto el número de
+vuelos como la cantidad de itinerarios encontrados. A diferencia de la función \texttt{itinerarios}, que genera
+todas las rutas posibles sin ciclos, las funciones \texttt{itinerariosTiempo} e \texttt{itinerariosTiempoPar}
+ordenan dichos itinerarios según su duración total y devuelven dicho conjunto ya clasificado.
+
+En los datasets pequeños (Curso y A), aunque el número de vuelos es bajo (15--16) y el número de
+itinerarios posibles es reducido (entre 0 y 5 en la mayoría de los casos), la versión paralela no muestra
+beneficios de desempeño. Los valores de \emph{speedup} se mantienen consistentemente por debajo de 1
+(por ejemplo, entre 0.05 y 0.21 para los grupos Curso y A), lo que indica que la versión paralela es más lenta
+que la secuencial. Esto se debe a que el coste fijo de crear tareas paralelas, distribuir el trabajo y consolidar
+los resultados es comparable o incluso mayor que el tiempo total de la versión secuencial cuando el número
+de itinerarios es pequeño. En estos escenarios, el paralelismo introduce overhead innecesario.
+
+En los datasets de tamaño medio (grupo B, 40 vuelos), el número de itinerarios crece pero sigue siendo
+moderado (hasta 29 rutas encontradas). En todos los casos B1--B3 y B2--B3 el \emph{speedup} permanece
+por debajo de 1 (entre 0.04 y 0.19), lo cual confirma que el paralelismo continúa sin ofrecer ventajas. En este
+rango, aunque hay más rutas que procesar, la magnitud del trabajo sigue siendo insuficiente para amortizar el
+costo de la paralelización. Por lo tanto, la versión secuencial sigue siendo preferible para este tamaño de
+entrada.
+
+El panorama cambia en los datasets grandes (grupo C, 100 vuelos), donde el número de itinerarios
+aumenta sustancialmente. En varios casos se obtienen cientos o miles de itinerarios (por ejemplo, 1470 en
+C1-1, 1369 en C1-2, 1605 en C2-3 y 2944 en C3-1). En estos escenarios, la mayor parte del coste computacional
+proviene de la exploración y el cálculo de tiempos para todas las rutas posibles. Aquí, las tareas paralelas
+tienen suficiente trabajo útil para compensar el coste del paralelismo, y la versión paralela comienza a
+mostrar mejoras significativas: se observan \emph{speedups} superiores a 1 en la mayoría de los casos del
+grupo C, con valores que llegan a 2.60x, 3.42x e incluso superan el 2.40x en rutas como C3-3. Esto indica que,
+cuando el volumen de rutas a procesar es grande, la paralelización logra aprovechar eficazmente los múltiples
+núcleos disponibles, reduciendo de forma notable el tiempo total de ejecución.
+
+En resumen, los resultados permiten identificar un patrón claro: cuando el número de itinerarios es bajo,
+el sobrecosto de la paralelización hace que la versión secuencial sea más eficiente; cuando el número de
+itinerarios crece y el problema adquiere mayor complejidad (datasets del grupo C), la versión paralela
+empieza a ofrecer mejoras tangibles en tiempo de ejecución. De este modo, la pertinencia de paralelizar la
+función \texttt{itinerariosTiempo} depende directamente de la magnitud del espacio de búsqueda (cantidad
+de itinerarios posibles) para una ruta dada.
+
+\textbf{Límite del enfoque exhaustivo aplicado a itinerariosTiempo.}
+
+La función \texttt{itinerariosTiempo} calcula correctamente todos los itinerarios válidos y luego los ordena
+por tiempo total. Este enfoque es adecuado para datasets pequeños y medianos (grupos A, B y C); sin
+embargo, al intentar utilizar datasets aún más grandes (como los del grupo D, con aproximadamente 500
+vuelos), se manifiesta una explosión combinatoria propia del problema: el número de caminos simples en un
+grafo dirigido denso crece extremadamente rápido. Esto vuelve inviable generar, ordenar y almacenar todos
+los itinerarios en memoria. Incluso asignando varios gigabytes de heap a la JVM, la gran cantidad de listas
+intermedias provoca que la ejecución quede bloqueada por operaciones de recolección de basura.
+
+Este comportamiento no se debe a un error en la implementación, sino a los límites teóricos del enfoque
+exhaustivo. La versión paralela \texttt{itinerariosTiempoPar} comparte exactamente el mismo límite: aunque
+el paralelismo divide el trabajo entre múltiples núcleos, no reduce la cantidad de itinerarios que deben
+generarse ni la memoria necesaria para almacenarlos. Si para una ruta existen millones de itinerarios
+posibles, ambas versiones consumirán memoria proporcional y enfrentarán los mismos límites de espacio.
+El paralelismo únicamente acelera el cómputo, pero no resuelve el crecimiento exponencial inherente al
+problema. Esto demuestra que, para instancias muy grandes, sería necesario considerar enfoques alternativos
+que no requieran enumerar todas las rutas antes de seleccionar las mejores (por ejemplo, algoritmos de
+búsqueda heurística u optimización sin exploración exhaustiva).
+
 \section{Optimización de la hora de salida}
 
 Sea $g : (String \times String \times \mathbb{N} \times \mathbb{N}) \to Itinerario$ la función que dados dos códigos de aeropuerto $c_1$ y $c_2$, y una hora de cita $(H, M)$, devuelve el itinerario que:
@@ -660,7 +1228,6 @@ def itinerarioSalidaPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]):
 
     if (todosItinerarios.isEmpty) return Nil
 
-    // Clasificar en paralelo
     val itinerariosClasificados = todosItinerarios.par.map { itinerario =>
       val salida = horaSalida(itinerario)
       val llegada = horaLlegada(itinerario)
@@ -669,7 +1236,7 @@ def itinerarioSalidaPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]):
     }
 
     val mejorItinerario = itinerariosClasificados
-      .seq  // Convertir a secuencial para sortBy
+      .seq  
       .sortBy { case (_, salida, dias) => (dias, -salida) }
       .head
 
