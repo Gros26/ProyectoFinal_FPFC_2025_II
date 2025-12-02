@@ -48,7 +48,10 @@ package object ItinerariosPar {
       }
     }
 
-    def itinerariosEscalasPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
+  }
+
+  def itinerariosEscalasPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
       val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
 
       def totalEscalas(itinerario: Itinerario): Int = {
@@ -69,7 +72,4 @@ package object ItinerariosPar {
         }
       }
     }
-
-    (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1), nivel = 0)
-  }
 }
