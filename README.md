@@ -1,76 +1,196 @@
-# Sistema de Análisis de Itinerarios - Proyecto FPFC
+============================================================
+PROYECTO FINAL – Programación Funcional y Paralela (Scala)
+============================================================
 
-Este proyecto implementa y compara algoritmos para la búsqueda de itinerarios de vuelos, utilizando tanto enfoques secuenciales como paralelos en Scala. El objetivo es analizar el rendimiento (speedup) obtenido al paralelizar la búsqueda de rutas en diferentes datasets de vuelos.
+Este archivo describe la estructura del proyecto, los archivos
+incluidos, su propósito y las instrucciones para compilar y 
+ejecutar las distintas partes del programa.
 
-## Descripción de los Archivos Entregados
+------------------------------------------------------------
+1. Requerimientos del sistema
+------------------------------------------------------------
 
-El código fuente se encuentra en el directorio `src/main/scala` y está organizado de la siguiente manera:
+Para ejecutar el proyecto se requiere:
 
-### Archivos Principales
-*   **`Main.scala`**: Punto de entrada de la aplicación. Contiene la lógica para el menú interactivo y el procesamiento de argumentos de línea de comandos. Permite seleccionar qué función y qué dataset ejecutar.
-*   **`Benchmarks.scala`**: Contiene la lógica de medición de tiempos y comparación de resultados entre las versiones secuenciales y paralelas. Utiliza `ScalaMeter` para las mediciones.
+- Scala 2.13.x
+- SBT (Scala Build Tool)
+- Java 11, 17 o 21 (⚠️ Java 24 no es compatible con Scala 2.13.10)
+- Un entorno compatible como IntelliJ IDEA con plugin de Scala
 
-### Paquete `Datos`
-*   **`package.scala`**: Define las estructuras de datos básicas (`Aeropuerto`, `Vuelo`, `Itinerario`) y contiene los datos del ejemplo del curso (`aeropuertosCurso`, `vuelosCurso`).
-*   **`VuelosA.scala`**: Dataset A (15 vuelos).
-*   **`VuelosB.scala`**: Dataset B (40 vuelos).
-*   **`VuelosC.scala`**: Dataset C (100 vuelos).
-*   **`VuelosD.scala`**: Dataset D (500 vuelos).
+------------------------------------------------------------
+2. Estructura del proyecto
+------------------------------------------------------------
 
-### Paquete `Itinerarios`
-*   **`package.scala`** (o archivo correspondiente): Implementación secuencial de las funciones de búsqueda de itinerarios (`itinerarios`, `itinerariosTiempo`, `itinerariosEscalas`, etc.).
+El proyecto está organizado de la siguiente manera:
 
-### Paquete `ItinerariosPar`
-*   **`package.scala`** (o archivo correspondiente): Implementación paralela de las funciones de búsqueda de itinerarios (`itinerariosPar`, `itinerariosTiempoPar`, `itinerariosEscalasPar`, etc.), utilizando colecciones paralelas de Scala.
+src/
+ └── main/
+      └── scala/
+           ├── common/
+           │     └── package.scala
+           │
+           ├── Datos/
+           │     ├── package.scala
+           │     ├── VuelosA.scala
+           │     ├── VuelosB.scala
+           │     ├── VuelosC.scala
+           │     └── VuelosD.scala
+           │
+           ├── Itinerarios/
+           │     └── package.scala
+           │
+           ├── ItinerariosPar/
+           │     └── package.scala
+           │
+           ├── Benchmarks.scala
+           └── Main.scala
 
-## Instrucciones de Ejecución
+ └── test/
+      └── scala/
+           ├── Pruebas.sc
+           ├── PruebasItinerarios.sc
+           ├── PruebaItinerariosEscalas.sc
+           ├── pruebasItinerarioSalida.sc
+           └── PruebasPar.sc
 
-El proyecto utiliza `sbt` para la compilación y ejecución.
+------------------------------------------------------------
+3. Descripción de directorios y módulos
+------------------------------------------------------------
 
-### Requisitos
-*   Tener instalado `sbt` y `Java` (JDK 8 o superior).
+● common/
+  Contiene definiciones y utilidades generales compartidas
+  entre distintos módulos del proyecto (tipos, alias, helpers).
+  Aquí se centralizan elementos que se usan de manera transversal.
 
-### Ejecución Interactiva
-Para iniciar el menú interactivo, simplemente ejecute:
+● Datos/
+  Incluye los datasets provistos por el curso (A, B, C, D),
+  cada uno representado como una lista de vuelos declarada en
+  archivos independientes. Estos datos se utilizan en las pruebas
+  del programa y en los benchmarks de rendimiento.
 
-```bash
-sbt run
-```
+● Itinerarios/
+  Contiene las implementaciones **secuenciales** de las funciones:
+  
+  - `itinerarios`: Construye todos los itinerarios posibles 
+    entre dos aeropuertos sin repetir nodos (caminos simples).
+    Realiza búsqueda exhaustiva DFS con recursión estructural.
+  
+  - `itinerariosEscalas`: Retorna los itinerarios con el menor
+    número total de escalas (técnicas + transbordos).
+  
+  - `itinerarioSalida`: Dado un horario de llegada máximo,
+    retorna el itinerario que permite salir más tarde.
 
-Esto mostrará un menú donde podrá seleccionar la función a probar (por ejemplo, "itinerarios vs itinerariosPar") y los datasets deseados.
+● ItinerariosPar/
+  Contiene las implementaciones **paralelas**:
+  
+  - `itinerariosPar`: Versión paralela de `itinerarios` con:
+    * Umbrales mínimos de paralelización (UMBRAL_PAR = 4)
+    * Control de profundidad (MAX_PROF_PAR = 2)
+    * División del espacio de búsqueda en tareas independientes
+  
+  - `itinerariosEscalasPar`: Versión paralela de `itinerariosEscalas`
+    que utiliza colecciones paralelas para filtrar resultados.
 
-### Ejecución con Argumentos
-También puede ejecutar comandos directamente sin pasar por el menú interactivo:
+● Benchmarks.scala
+  Ejecuta mediciones de rendimiento para comparar versiones
+  secuenciales y paralelas usando ScalaMeter. Incluye:
+  
+  - Benchmarks para `itinerarios` vs `itinerariosPar`
+  - Benchmarks para `itinerariosEscalas` vs `itinerariosEscalasPar`
+  - Soporte para datasets: Curso, A (15), B (40), C (100), D (500)
 
-```bash
-sbt "run [funcion] [datasets...]"
-```
+● Main.scala
+  Punto de entrada principal con dos modos de ejecución:
+  
+  1. Línea de comandos: sbt "run [función] [datasets...]"
+  2. Menú interactivo: sbt run
 
-**Argumentos:**
-*   `funcion`: La función a probar.
-    *   `itinerarios` o `i`: Prueba `itinerarios` vs `itinerariosPar`.
-    *   `escalas` o `e`: Prueba `itinerariosEscalas` vs `itinerariosEscalasPar`.
-    *   `tiempo` o `t`: (TODO) Prueba `itinerariosTiempo`.
-    *   `aire` o `a`: (TODO) Prueba `itinerariosAire`.
-    *   `salida` o `s`: (TODO) Prueba `itinerarioSalida`.
-*   `datasets`: Lista de datasets a probar (separados por espacio).
-    *   `curso` o `c`: Ejemplos del curso.
-    *   `a`, `b`, `c`, `d`: Datasets A, B, C, D respectivamente.
-    *   `all` o `todos`: Todos los datasets (excepto D por precaución de memoria).
+------------------------------------------------------------
+4. Funciones implementadas
+------------------------------------------------------------
 
-**Ejemplos:**
+Estado actual de implementación:
 
-1.  Ejecutar benchmarks de itinerarios básicos con el dataset del curso:
-    ```bash
-    sbt "run itinerarios curso"
-    ```
+  ✅ itinerarios / itinerariosPar
+  ✅ itinerariosEscalas / itinerariosEscalasPar  
+  ✅ itinerarioSalida (secuencial)
+  ⏳ itinerariosTiempo / itinerariosTiempoPar (pendiente benchmark)
+  ⏳ itinerariosAire / itinerariosAirePar (pendiente benchmark)
+  ⏳ itinerarioSalidaPar (pendiente)
 
-2.  Ejecutar benchmarks de itinerarios con escalas para los datasets A, B y C:
-    ```bash
-    sbt "run escalas a b c"
-    ```
+------------------------------------------------------------
+5. Cómo compilar el proyecto
+------------------------------------------------------------
 
-3.  Ver la ayuda:
-    ```bash
-    sbt "run help"
-    ```
+Desde la raíz del proyecto, ejecutar:
+
+    sbt compile
+
+Esto descargará las dependencias necesarias y compilará todos los
+módulos del proyecto.
+
+------------------------------------------------------------
+6. Cómo ejecutar los benchmarks
+------------------------------------------------------------
+
+MODO 1: Línea de comandos
+-------------------------
+
+  # Benchmarks de itinerarios
+  sbt "run itinerarios all"
+  sbt "run i curso"
+  sbt "run i a b c"
+
+  # Benchmarks de itinerariosEscalas
+  sbt "run escalas all"
+  sbt "run e curso"
+  sbt "run e a b c"
+
+  # Ver ayuda
+  sbt "run help"
+
+MODO 2: Menú interactivo
+------------------------
+
+  sbt run
+
+  Luego seleccionar:
+    1. itinerarios vs itinerariosPar
+    3. itinerariosEscalas vs itinerariosEscalasPar
+
+Datasets disponibles:
+  - curso, c    : Ejemplos del enunciado del curso
+  - a           : Dataset A (15 vuelos)
+  - b           : Dataset B (40 vuelos)
+  - c           : Dataset C (100 vuelos)
+  - d           : Dataset D (500 vuelos) ⚠️ CUIDADO: puede agotar memoria
+  - all, todos  : Todos los datasets (excepto D)
+
+------------------------------------------------------------
+7. Cómo ejecutar las pruebas
+------------------------------------------------------------
+
+Los archivos dentro de test/scala son scripts .sc.
+Pueden ejecutarse desde IntelliJ usando "Scala Worksheets"
+o desde consola con amm:
+
+    amm test/scala/Pruebas.sc
+    amm test/scala/PruebaItinerariosEscalas.sc
+
+------------------------------------------------------------
+8. Notas finales
+------------------------------------------------------------
+
+- El dataset D no puede ser procesado completamente por la 
+  explosión combinatoria, como se discute en el informe.
+
+- La implementación paralela mejora el rendimiento solo cuando 
+  el número de itinerarios es suficientemente grande (casos C).
+
+- Si usas Java 24, debes actualizar a Scala 2.13.12+ o usar
+  Java 11/17/21 para evitar errores de compilación.
+
+============================================================
+FIN DEL ARCHIVO README
+============================================================
