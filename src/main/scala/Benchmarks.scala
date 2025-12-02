@@ -126,6 +126,14 @@ object Benchmarks {
   // BENCHMARKS PARA: itinerariosEscalas
   // ============================================
 
+  // Configuración más ligera para escalas (evita desbordamiento de memoria)
+  val lightConfig = config(
+    Key.exec.minWarmupRuns := 2,
+    Key.exec.maxWarmupRuns := 3,
+    Key.exec.benchRuns     := 3,
+    Key.verbose            := false
+  ) withWarmer(new Warmer.Default)
+
   def compararEscalas(dataset: String, origen: String, destino: String,
                       vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): Unit = {
     if (vuelos.isEmpty) {
@@ -133,30 +141,48 @@ object Benchmarks {
       return
     }
 
-    val its    = itinerariosEscalas(vuelos, aeropuertos)
-    val itsPar = itinerariosEscalasPar(vuelos, aeropuertos)
+    // Forzar GC antes de cada benchmark para liberar memoria
+    System.gc()
 
-    var resultSeq: List[Itinerario] = Nil
-    var resultPar: List[Itinerario] = Nil
-
-    val timeSeq = standardConfig measure {
-      resultSeq = its(origen, destino)
+    // Medir tiempo secuencial - crear función dentro del measure para evitar retener referencias
+    var countSeq = 0
+    val timeSeq = lightConfig measure {
+      val its = itinerariosEscalas(vuelos, aeropuertos)
+      val result = its(origen, destino)
+      countSeq = result.length
+      result // se descarta después de medir
     }
 
-    val timePar = standardConfig measure {
-      resultPar = itsPar(origen, destino)
+    System.gc()
+
+    // Medir tiempo paralelo
+    var countPar = 0
+    val timePar = lightConfig measure {
+      val itsPar = itinerariosEscalasPar(vuelos, aeropuertos)
+      val result = itsPar(origen, destino)
+      countPar = result.length
+      result
     }
+
+    // Verificar correctitud con una sola ejecución (fuera del benchmark)
+    System.gc()
+    val resultSeq = itinerariosEscalas(vuelos, aeropuertos)(origen, destino)
+    val resultPar = itinerariosEscalasPar(vuelos, aeropuertos)(origen, destino)
+    val correct = resultSeq.toSet == resultPar.toSet
 
     val timeSeqMs = timeSeq.value * 1000.0
     val timeParMs = timePar.value * 1000.0
     val speedup = if (timeParMs == 0.0) Double.PositiveInfinity else timeSeqMs / timeParMs
-    val correct = resultSeq.toSet == resultPar.toSet
 
-    println(f"$dataset%-12s | $origen→$destino%-8s | ${vuelos.length}%-6d | ${resultSeq.length}%-12d | $timeSeqMs%12.3f | $timeParMs%10.3f | $speedup%6.2fx")
+    println(f"$dataset%-12s | $origen→$destino%-8s | ${vuelos.length}%-6d | ${countSeq}%-12d | $timeSeqMs%12.3f | $timeParMs%10.3f | $speedup%6.2fx")
 
     if (!correct) {
       println("⚠️  ERROR: Los resultados secuencial y paralelo no coinciden!")
+      println(s"   Seq: ${resultSeq.length} itinerarios, Par: ${resultPar.length} itinerarios")
     }
+
+    // Liberar referencias explícitamente
+    System.gc()
   }
 
   def benchmarkEscalasCurso(): Unit = {
