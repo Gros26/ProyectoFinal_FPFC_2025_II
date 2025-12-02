@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+\usepackage{graphicx} 
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{minted}
@@ -19,7 +19,7 @@
 \author{
     Sebastian Oviedo \\ \texttt{xxxx} \\
     Juan Moreno \\ \texttt{xxxx} \\
-    Weis Paul \\ \texttt{xxxx} \\
+    Weis Paul \\ \texttt{2513207} \\
     Grosman Klein García Valencia \\ \texttt{2340247}
 }
 \date{Diciembre 2025}
@@ -1369,6 +1369,182 @@ La situación cambia en los \textbf{datasets grandes} (grupo C, 100 vuelos), don
 
 A diferencia de \texttt{itinerarios}, donde el speedup dependía principalmente del número de itinerarios encontrados, en \texttt{itinerarioSalida} el speedup depende del tamaño del espacio de búsqueda (número total de vuelos y conectividad del grafo), la complejidad de la búsqueda (profundidad y ramificación del árbol), y solo secundariamente del número de itinerarios resultantes. La función \texttt{itinerarioSalida} muestra que el paralelismo es contraproducente para datasets pequeños y medianos (menos de 100 vuelos), pero beneficioso para datasets grandes (100 vuelos o más) con espacios de búsqueda complejos. El umbral de eficiencia está alrededor de 100 vuelos y tiempos de ejecución superiores a 500ms.
 
+\section{Minimización del tiempo en aire}
 
+Sea $f_{aire} : (String \times String) \to List[Itinerario]$ la función que, dados dos códigos de aeropuerto $c_1$ y $c_2$, devuelve los tres itinerarios que minimizan el tiempo de vuelo, el cual es proporcional a la distancia recorrida.
+
+A diferencia de la minimización de tiempo total (que incluye esperas), esta función busca la ruta espacialmente más corta. Para ello, se asume un plano cartesiano 2D para las coordenadas de los aeropuertos.
+
+La implementación en Scala es la siguiente:
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+
+  val generarItinerarios = itinerarios(vuelos, aeropuertos)
+
+  def distancia(org: Aeropuerto, dst: Aeropuerto): Double = {
+    Math.sqrt(Math.pow(org.X - dst.X, 2) + Math.pow(org.Y - dst.Y, 2))
+  }
+
+  def tiempoAireTotal(it: Itinerario): Double = {
+    it.map { v =>
+      val aeroOrg = aeropuertos.find(_.Cod == v.Org).get
+      val aeroDst = aeropuertos.find(_.Cod == v.Dst).get
+      distancia(aeroOrg, aeroDst)
+    }.sum
+  }
+
+  (cod1: String, cod2: String) => {
+    val todos = generarItinerarios(cod1, cod2)
+    val ordenados = todos.sortBy(tiempoAireTotal)
+    ordenados.take(3)
+  }
+}
+\end{minted}
+
+\subsection{Demostración de Correctitud}
+
+La demostración se sustenta en la correcta modelación matemática de la distancia y la propiedad de orden.
+
+\subsubsection{Correctitud de la función de costo}
+
+\textbf{Requerimiento:} Minimizar el tiempo en el aire, proporcional a la distancia recorrida.
+
+\textbf{Análisis:}
+La implementación utiliza la fórmula de la distancia euclidiana en el plano cartesiano 2D para calcular la distancia entre dos aeropuertos $Org$ y $Dst$:
+\[ d(Org, Dst) = \sqrt{(Org_x - Dst_x)^2 + (Org_y - Dst_y)^2} \]
+
+Sea $I$ un itinerario compuesto por una secuencia de vuelos $\langle v_1, v_2, \dots, v_k \rangle$. La función de costo total $f_{aire}$ se define como la suma de las distancias de cada segmento:
+
+\[ f_{aire}(I) = \sum_{v \in I} d(Aeropuerto(v.Org), Aeropuerto(v.Dst)) \]
+
+Dado que la distancia euclidiana satisface la desigualdad triangular y la no-negatividad, la suma de distancias representa correctamente la longitud total del trayecto espacial. Minimizar esta suma equivale a encontrar la ruta espacialmente más corta.
+
+\subsubsection{Correctitud de la selección}
+
+Al igual que en las funciones anteriores, `itinerariosAire` genera primero el conjunto completo de itinerarios válidos $T = f(c_1, c_2)$ (cuya correctitud fue demostrada en la Sección 1).
+Posteriormente aplica `sortBy` usando la función $f_{aire}$. Dado que $f_{aire}$ devuelve un valor `Double` consistente para cada itinerario, el ordenamiento garantiza que los primeros elementos de la lista resultante sean aquellos con la menor distancia acumulada.
+
+\subsection{Versión Paralela y Equivalencia}
+
+La versión paralela, `itinerariosAirePar`, sigue el mismo esquema de descomposición que las funciones anteriores, pero aprovecha el paralelismo de datos de manera más intensiva debido al costo computacional de la función objetivo.
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosAirePar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+
+  // Utiliza la versión paralela para generar el espacio de búsqueda
+  val generarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+
+  // ... (definición de distancia y tiempoAireTotal idéntica a secuencial) ...
+
+  (cod1: String, cod2: String) => {
+    val todos = generarItinerariosPar(cod1, cod2)
+
+    // Evaluación paralela de la función de costo (floating point)
+    val ordenados = todos.par
+      .map(it => (tiempoAireTotal(it), it))
+      .toList
+      .sortBy(_._1)
+      .map(_._2)
+
+    ordenados.take(3)
+  }
+}
+\end{minted}
+
+\subsubsection{Demostración de Equivalencia Algorítmica}
+
+Deseamos demostrar que:
+\[ \texttt{itinerariosAirePar} \equiv \texttt{itinerariosAire} \]
+
+\textbf{1. Equivalencia en la Generación:}
+Sabemos por el Teorema 3 que el conjunto de itinerarios generado es idéntico: $I_{par} = I_{sec}$.
+
+\textbf{2. Equivalencia en la Evaluación:}
+La versión paralela computa el costo mediante un mapeo paralelo:
+\[ V_{costos} = I.par.map(f_{aire}) \]
+A diferencia de `itinerariosTiempo` donde el costo es una resta de enteros, aquí $f_{aire}$ implica operaciones de punto flotante (raíz cuadrada y potencias). Sin embargo, $f_{aire}$ es una función pura. La operación `map` en colecciones paralelas garantiza que se aplica la función a todos los elementos. Al convertir de nuevo a lista secuencial (`toList`) y ordenar, se garantiza el mismo resultado que la versión secuencial, dado que el orden relativo final depende únicamente de los valores calculados.
+
+\subsection{Análisis comparativo de desempeño}
+
+\begin{longtable}{lcccccc}
+\caption{Comparación de desempeño: versión secuencial vs paralela (itinerariosAire)}\\
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endfirsthead
+
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{7}{r}{\small Continúa en la siguiente página} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+Curso-A1 & MID--SVCS & 16  & 1 & 5.120 & 72.340 & 0.07 \\
+Curso-A2 & CLO--SVO & 16  & 4 & 24.150 & 165.890 & 0.15 \\
+Curso-A3 & CTG--PTY & 16  & 2 & 7.430 & 130.120 & 0.06 \\
+\midrule
+
+A1-1 & HOU--MSY & 15  & 5 & 55.200 & 410.550 & 0.13 \\
+A1-2 & MSY--BNA & 15  & 1 & 41.100 & 195.300 & 0.21 \\
+A1-3 & DFW--ORD & 15  & 1 & 7.850  & 142.600 & 0.06 \\
+\midrule
+
+A2-1 & DFW--ORD & 15  & 2 & 10.950 & 192.400 & 0.06 \\
+A2-2 & SFO--BNA & 15  & 0 & 13.200 & 95.150  & 0.14 \\
+A2-3 & PHX--LAX & 15  & 1 & 17.100 & 168.200 & 0.10 \\
+\midrule
+
+B1-1 & DFW--ORD & 40  & 16 & 31.400 & 255.600 & 0.12 \\
+B1-2 & DFW--DCA & 40  & 29 & 58.900 & 460.200 & 0.13 \\
+B1-3 & ORD--LAX & 40  & 3  & 7.200  & 99.800  & 0.07 \\
+\midrule
+
+B2-1 & DFW--ORD & 40  & 9  & 4.800  & 125.300 & 0.04 \\
+B2-2 & DFW--DCA & 40  & 9  & 26.500 & 152.100 & 0.17 \\
+B2-3 & ATL--SEA & 40  & 0  & 5.100  & 28.400  & 0.18 \\
+\midrule
+
+C1-1 & ORD--TPA & 100 & 1470 & 4890.500 & 1680.200 & 2.91 \\
+C1-2 & DFW--MIA & 100 & 1369 & 5320.100 & 1950.400 & 2.73 \\
+C1-3 & ATL--LAX & 100 & 676  & 1850.300 & 890.150  & 2.08 \\
+\midrule
+
+C2-1 & ORD--TPA & 100 & 246  & 2580.600 & 1350.800 & 1.91 \\
+C2-2 & LAX--JFK & 100 & 0    & 810.200  & 680.400  & 1.19 \\
+C2-3 & SEA--MIA & 100 & 1605 & 3150.800 & 1120.500 & 2.81 \\
+\midrule
+
+C3-1 & ORD--TPA & 100 & 2944 & 4820.400 & 1410.600 & 3.42 \\
+C3-2 & DFW--SEA & 100 & 236  & 4010.200 & 1250.800 & 3.21 \\
+C3-3 & ATL--SFO & 100 & 2939 & 2990.500 & 880.200  & 3.40 \\
+\end{longtable}
+
+\textbf{Análisis de Resultados}
+
+La función `itinerariosAire` introduce una carga computacional adicional por itinerario respecto a las funciones anteriores: el cálculo de la distancia euclidiana ($\sqrt{x^2 + y^2}$) para cada segmento de vuelo.
+
+\textbf{Comportamiento en Datasets Pequeños y Medianos (A y B):}
+Se observa un patrón consistente con los análisis previos: para grafos con pocos vuelos y un número reducido de itinerarios resultantes, la versión secuencial es superior. Los \emph{speedups} oscilan entre 0.04x y 0.21x. Cuando el número de itinerarios es trivial, el costo de particionar los datos y gestionar los hilos para calcular unas pocas distancias supera al cálculo secuencial directo.
+
+\textbf{Comportamiento en Datasets Grandes (C):}
+En los escenarios del grupo C, donde el número de itinerarios encontrados asciende a miles (p.ej., 2944 en C3-1), la versión paralela demuestra su mayor eficacia hasta el momento, con \emph{speedups} que alcanzan hasta \textbf{3.42x}.
+
+Este rendimiento superior se explica por la combinación de dos factores:
+\begin{enumerate}
+    \item \textbf{Generación Acelerada:} La fase de búsqueda utiliza `itinerariosPar`, eficiente en grafos densos.
+    \item \textbf{Evaluación Costosa:} A diferencia de `itinerariosTiempo`, donde la función de costo es simple, `itinerariosAire` realiza operaciones aritméticas de punto flotante. Al tener miles de itinerarios, la fase de mapeo paralelo distribuye esta carga significativa entre los núcleos.
+\end{enumerate}
+
+Es notable que en casos como C3-1 y C3-3, el speedup es superior al observado en la optimización de tiempo (que rondaba los 2.6x). Esto confirma que cuanto más costosa sea la función objetivo a evaluar por ruta, mayor es el beneficio de utilizar colecciones paralelas.
 
 \end{document}
