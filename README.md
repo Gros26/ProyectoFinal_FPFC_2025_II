@@ -51,6 +51,7 @@ src/
            ├── PruebasItinerarios.sc
            ├── PruebaItinerariosEscalas.sc
            ├── pruebasItinerarioSalida.sc
+           ├── PruebasItinerariosTiempo.sc
            └── PruebasPar.sc
 
 ------------------------------------------------------------
@@ -75,6 +76,9 @@ src/
     entre dos aeropuertos sin repetir nodos (caminos simples).
     Realiza búsqueda exhaustiva DFS con recursión estructural.
   
+  - `itinerariosTiempo`: Retorna los itinerarios ordenados por
+    tiempo total de viaje.
+  
   - `itinerariosEscalas`: Retorna los itinerarios con el menor
     número total de escalas (técnicas + transbordos).
   
@@ -89,15 +93,21 @@ src/
     * Control de profundidad (MAX_PROF_PAR = 2)
     * División del espacio de búsqueda en tareas independientes
   
+  - `itinerariosTiempoPar`: Versión paralela de `itinerariosTiempo`.
+  
   - `itinerariosEscalasPar`: Versión paralela de `itinerariosEscalas`
     que utiliza colecciones paralelas para filtrar resultados.
+  
+  - `itinerarioSalidaPar`: Versión paralela de `itinerarioSalida`.
 
 ● Benchmarks.scala
   Ejecuta mediciones de rendimiento para comparar versiones
   secuenciales y paralelas usando ScalaMeter. Incluye:
   
   - Benchmarks para `itinerarios` vs `itinerariosPar`
+  - Benchmarks para `itinerariosTiempo` vs `itinerariosTiempoPar`
   - Benchmarks para `itinerariosEscalas` vs `itinerariosEscalasPar`
+  - Benchmarks para `itinerarioSalida` vs `itinerarioSalidaPar`
   - Soporte para datasets: Curso, A (15), B (40), C (100), D (500)
 
 ● Main.scala
@@ -113,11 +123,10 @@ src/
 Estado actual de implementación:
 
   ✅ itinerarios / itinerariosPar
+  ✅ itinerariosTiempo / itinerariosTiempoPar
   ✅ itinerariosEscalas / itinerariosEscalasPar  
-  ✅ itinerarioSalida (secuencial)
-  ⏳ itinerariosTiempo / itinerariosTiempoPar (pendiente benchmark)
-  ⏳ itinerariosAire / itinerariosAirePar (pendiente benchmark)
-  ⏳ itinerarioSalidaPar (pendiente)
+  ✅ itinerarioSalida / itinerarioSalidaPar
+  ⏳ itinerariosAire / itinerariosAirePar (pendiente)
 
 ------------------------------------------------------------
 5. Cómo compilar el proyecto
@@ -142,10 +151,18 @@ MODO 1: Línea de comandos
   sbt "run i curso"
   sbt "run i a b c"
 
+  # Benchmarks de itinerariosTiempo
+  sbt "run tiempo all"
+  sbt "run t curso"
+
   # Benchmarks de itinerariosEscalas
   sbt "run escalas all"
   sbt "run e curso"
   sbt "run e a b c"
+
+  # Benchmarks de itinerarioSalida
+  sbt "run salida all"
+  sbt "run s curso"
 
   # Ver ayuda
   sbt "run help"
@@ -157,7 +174,9 @@ MODO 2: Menú interactivo
 
   Luego seleccionar:
     1. itinerarios vs itinerariosPar
+    2. itinerariosTiempo vs itinerariosTiempoPar
     3. itinerariosEscalas vs itinerariosEscalasPar
+    5. itinerarioSalida vs itinerarioSalidaPar
 
 Datasets disponibles:
   - curso, c    : Ejemplos del enunciado del curso

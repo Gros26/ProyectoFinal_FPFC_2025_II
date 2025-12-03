@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
+<<<<<<< HEAD
+    <profile name="sbt 1" modules="ProyectoFinal_FPFC,ProyectoFinal_FPFC.main,ProyectoFinal_FPFC.test" />
+=======
     <option name="separateProdTestSources" value="true" />
     <profile name="sbt 1" modules="ProyectoFinal_FPFC" />
     <profile name="sbt 2" modules="ProyectoFinal_FPFC.main,ProyectoFinal_FPFC.test">
+>>>>>>> origin/itinerarioSalida
       <option name="implicitConversions" value="true" />
       <option name="deprecationWarnings" value="true" />
     </profile>

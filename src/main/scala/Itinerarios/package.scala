@@ -2,6 +2,8 @@ import Datos._
 import common._
 
 package object Itinerarios {
+
+
   def itinerarios(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
@@ -19,41 +21,97 @@ package object Itinerarios {
     (cod1: String, cod2: String) => buscar(cod1, cod2, Set(cod1))
   }
 
+  def itinerariosTiempo(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+    // Reutilizar función itinerarios existente
+    val generarItinerarios = itinerarios(vuelos, aeropuertos)
+
+    // Función auxiliar: calcula el tiempo total de un itinerario
+    def tiempoTotal(it: Itinerario): Int = {
+      if (it.isEmpty) 0
+      else {
+        val primero = it.head
+        val ultimo  = it.last
+
+        def aMinutos(h: Int, m: Int) = h * 60 + m
+        val salida  = aMinutos(primero.HS, primero.MS)
+        var llegada = aMinutos(ultimo.HL, ultimo.ML)
+
+        // Si llega al día siguiente
+        if (llegada < salida)
+          llegada += 24 * 60
+
+        llegada - salida
+      }
+    }
+
+    // Retornamos la función final (cod1, cod2) => List[Itinerario]
+    (cod1: String, cod2: String) => {
+
+      // 1. Obtener todos los itinerarios posibles usando tu función ya implementada
+      val todos = generarItinerarios(cod1, cod2)
+
+      // 2. Ordenar por su tiempo total
+      val ordenados = todos.sortBy(tiempoTotal)
+
+      // // 3. Retornar los tres mejores (o menos si no hay tantos)
+      ordenados
+    }
+  }
+
   def itinerarioSalida(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
 
-    def aMinutos(h: Int, m: Int): Int = h * 60 + m
+  def aMinutos(h: Int, m: Int): Int = h * 60 + m
 
-    def horaSalida(itinerario: Itinerario): Int = itinerario match {
-      case Nil => 0
-      case vuelo :: _ => aMinutos(vuelo.HS, vuelo.MS)
-    }
-
-    def horaLlegada(itinerario: Itinerario): Int = itinerario match {
-      case Nil => 0
-      case vuelos => aMinutos(vuelos.last.HL, vuelos.last.ML)
-    }
-
-    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
-
-    def buscar(cod1: String, cod2: String, HL: Int, ML: Int): Itinerario = {
-      val todosItinerarios = buscarItinerarios(cod1, cod2)
-      val horaCita = aMinutos(HL, ML)
-
-      //filtro itinerarios que llegan a tiempo
-      val itinerariosValidos = todosItinerarios.filter { itinerario =>
-        horaLlegada(itinerario) <= horaCita
-      }
-
-      //si no hay retorno vacio
-      if (itinerariosValidos.isEmpty) Nil
-      else {
-        //me quedo con el que sale mas tarde
-        itinerariosValidos.maxBy(horaSalida)
-      }
-    }
-
-    (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
+  def horaSalida(itinerario: Itinerario): Int = itinerario match {
+    case Nil => 0
+    case vuelo :: _ => aMinutos(vuelo.HS, vuelo.MS)
   }
+
+  def horaLlegada(itinerario: Itinerario): Int = itinerario match {
+    case Nil => 0
+    case vuelos => aMinutos(vuelos.last.HL, vuelos.last.ML)
+  }
+
+  val buscarItinerarios = itinerarios(vuelos, aeropuertos)
+
+  def buscar(cod1: String, cod2: String, HL: Int, ML: Int): Itinerario = {
+    val todosItinerarios = buscarItinerarios(cod1, cod2)
+    val horaCita = aMinutos(HL, ML)
+
+    // Si no hay itinerarios, retornar vacío
+    if (todosItinerarios.isEmpty) return Nil
+
+    // Clasificar itinerarios según cuándo llegan
+    val itinerariosClasificados = todosItinerarios.map { itinerario =>
+      val salida = horaSalida(itinerario)
+      val llegada = horaLlegada(itinerario)
+      
+      // Calcular en qué "día relativo" llega respecto a la cita
+      val diasAntes = if (llegada <= horaCita) {
+        // Llega el mismo día a tiempo
+        0
+      } else {
+        // Llega después de la hora de cita el mismo día
+        // Pero si lo tomamos el día anterior, llegaríamos a tiempo
+        1
+      }
+      
+      (itinerario, salida, diasAntes)
+    }
+
+    // Ordenar por:
+    // 1. Menor número de días antes (prioridad a llegar el mismo día)
+    // 2. Mayor hora de salida (salir lo más tarde posible)
+    val mejorItinerario = itinerariosClasificados
+      .sortBy { case (_, salida, dias) => (dias, -salida) }
+      .head
+
+    mejorItinerario._1
+  }
+
+  (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
+}
 
   def itinerariosEscalas(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     //Busco todos los itinerarios 
