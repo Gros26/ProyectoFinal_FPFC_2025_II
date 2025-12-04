@@ -14,7 +14,7 @@ Para ejecutar el proyecto se requiere:
 
 - Scala 2.13.x
 - SBT (Scala Build Tool)
-- Java 8 o superior
+- Java 11, 17 o 21 (⚠️ Java 24 no es compatible con Scala 2.13.10)
 - Un entorno compatible como IntelliJ IDEA con plugin de Scala
 
 ------------------------------------------------------------
@@ -23,36 +23,36 @@ Para ejecutar el proyecto se requiere:
 
 El proyecto está organizado de la siguiente manera:
 
-main/
- └── scala/
-      ├── common/
-      │     └── package.scala
-      │
-      ├── Datos/
-      │     ├── package.scala
-      │     ├── VuelosA.scala
-      │     ├── VuelosB.scala
-      │     ├── VuelosC.scala
-      │     └── VuelosD.scala
-      │
-      ├── itinerarios/
-      │     ├── package.scala
-      │     └── Itinerarios.scala   (si aplica)
-      │
-      ├── itinerariosPar/
-      │     ├── package.scala
-      │     └── ItinerariosPar.scala (si aplica)
-      │
-      ├── Benchmarks.scala
-      └── Main.scala
+src/
+ └── main/
+      └── scala/
+           ├── common/
+           │     └── package.scala
+           │
+           ├── Datos/
+           │     ├── package.scala
+           │     ├── VuelosA.scala
+           │     ├── VuelosB.scala
+           │     ├── VuelosC.scala
+           │     └── VuelosD.scala
+           │
+           ├── Itinerarios/
+           │     └── package.scala
+           │
+           ├── ItinerariosPar/
+           │     └── package.scala
+           │
+           ├── Benchmarks.scala
+           └── Main.scala
 
-test/
- └── scala/
-      ├── Pruebas.sc
-      ├── PruebasItinerarios.sc
-      ├── pruebasItinerarioSalida.sc
-      ├── PruebasItinerariosTiempo.sc
-      └── PruebasPar.sc
+ └── test/
+      └── scala/
+           ├── Pruebas.sc
+           ├── PruebasItinerarios.sc
+           ├── PruebaItinerariosEscalas.sc
+           ├── pruebasItinerarioSalida.sc
+           ├── PruebasItinerariosTiempo.sc
+           └── PruebasPar.sc
 
 ------------------------------------------------------------
 3. Descripción de directorios y módulos
@@ -69,58 +69,67 @@ test/
   archivos independientes. Estos datos se utilizan en las pruebas
   del programa y en los benchmarks de rendimiento.
 
-● itinerarios/
-  Contiene la implementación **secuencial** de la función 
-  `itinerarios`, la cual construye todos los itinerarios posibles 
-  entre dos aeropuertos sin repetir nodos (caminos simples).  
-
-  La función realiza una búsqueda exhaustiva DFS pura y está 
-  estructurada mediante funciones auxiliares y recursión estructural. 
-  Se garantiza corrección mediante una demostración por inducción 
-  estructural incluida en el informe PDF del proyecto.
-
-  Esta versión representa la línea base del comportamiento del 
-  algoritmo, siendo la referencia para validar la versión paralela.
-
-● itinerariosPar/
-  Contiene la implementación **paralela** `itinerariosPar`, 
-  que reproduce exactamente la misma lógica de búsqueda del módulo 
-  secuencial, pero incorpora paralelismo controlado mediante:
+● Itinerarios/
+  Contiene las implementaciones **secuenciales** de las funciones:
   
-  - Umbrales mínimos de paralelización
-  - Control de profundidad para evitar sobrecostos
-  - División del espacio de búsqueda en tareas independientes
-    cuando el conjunto de vuelos disponibles es suficientemente grande
+  - `itinerarios`: Construye todos los itinerarios posibles 
+    entre dos aeropuertos sin repetir nodos (caminos simples).
+    Realiza búsqueda exhaustiva DFS con recursión estructural.
   
-  La equivalencia entre `itinerarios` e `itinerariosPar` está 
-  demostrada formalmente en el informe, mediante inducción sobre 
-  la estructura del árbol de búsqueda generado por la recursión.
+  - `itinerariosTiempo`: Retorna los itinerarios ordenados por
+    tiempo total de viaje.
+  
+  - `itinerariosEscalas`: Retorna los itinerarios con el menor
+    número total de escalas (técnicas + transbordos).
+  
+  - `itinerarioSalida`: Dado un horario de llegada máximo,
+    retorna el itinerario que permite salir más tarde.
 
-  Esta versión se usa como base para las funciones extendidas que 
-  calculan itinerarios mínimos por tiempo.
+● ItinerariosPar/
+  Contiene las implementaciones **paralelas**:
+  
+  - `itinerariosPar`: Versión paralela de `itinerarios` con:
+    * Umbrales mínimos de paralelización (UMBRAL_PAR = 4)
+    * Control de profundidad (MAX_PROF_PAR = 2)
+    * División del espacio de búsqueda en tareas independientes
+  
+  - `itinerariosTiempoPar`: Versión paralela de `itinerariosTiempo`.
+  
+  - `itinerariosEscalasPar`: Versión paralela de `itinerariosEscalas`
+    que utiliza colecciones paralelas para filtrar resultados.
+  
+  - `itinerarioSalidaPar`: Versión paralela de `itinerarioSalida`.
 
 ● Benchmarks.scala
-  Ejecuta mediciones de rendimiento para comparar la versión
-  secuencial y la paralela (incluyendo las variantes por tiempo),
-  generando resultados como los presentados en el informe.
+  Ejecuta mediciones de rendimiento para comparar versiones
+  secuenciales y paralelas usando ScalaMeter. Incluye:
+  
+  - Benchmarks para `itinerarios` vs `itinerariosPar`
+  - Benchmarks para `itinerariosTiempo` vs `itinerariosTiempoPar`
+  - Benchmarks para `itinerariosEscalas` vs `itinerariosEscalasPar`
+  - Benchmarks para `itinerarioSalida` vs `itinerarioSalidaPar`
+  - Soporte para datasets: Curso, A (15), B (40), C (100), D (500)
 
 ● Main.scala
-  Punto de entrada principal del proyecto. Permite ejecutar un caso
-  de prueba o invocar manualmente las funciones desarrolladas.
-
-● test/scala/
-  Conjunto de scripts de prueba (archivos .sc) que validan distintas 
-  funcionalidades:
-
-  - Pruebas.sc → pruebas generales del sistema
-  - PruebasItinerarios.sc → verificación de itinerarios secuenciales
-  - pruebasItinerarioSalida.sc → análisis de salidas específicas
-  - PruebasItinerariosTiempo.sc → pruebas de itinerarios ordenados 
-                                  por tiempo
-  - PruebasPar.sc → verificación de comportamiento paralelo
+  Punto de entrada principal con dos modos de ejecución:
+  
+  1. Línea de comandos: sbt "run [función] [datasets...]"
+  2. Menú interactivo: sbt run
 
 ------------------------------------------------------------
-4. Cómo compilar el proyecto
+4. Funciones implementadas
+------------------------------------------------------------
+
+Estado actual de implementación:
+
+  ✅ itinerarios / itinerariosPar
+  ✅ itinerariosTiempo / itinerariosTiempoPar
+  ✅ itinerariosEscalas / itinerariosEscalasPar  
+  ✅ itinerarioSalida / itinerarioSalidaPar
+  ⏳ itinerariosAire / itinerariosAirePar (pendiente)
+
+------------------------------------------------------------
+5. Cómo compilar el proyecto
 ------------------------------------------------------------
 
 Desde la raíz del proyecto, ejecutar:
@@ -131,19 +140,54 @@ Esto descargará las dependencias necesarias y compilará todos los
 módulos del proyecto.
 
 ------------------------------------------------------------
-5. Cómo ejecutar el proyecto
+6. Cómo ejecutar los benchmarks
 ------------------------------------------------------------
 
-Para ejecutar el archivo Main.scala:
+MODO 1: Línea de comandos
+-------------------------
 
-    sbt run
+  # Benchmarks de itinerarios
+  sbt "run itinerarios all"
+  sbt "run i curso"
+  sbt "run i a b c"
 
-Para correr los benchmarks:
+  # Benchmarks de itinerariosTiempo
+  sbt "run tiempo all"
+  sbt "run t curso"
 
-    sbt "runMain Benchmarks"
+  # Benchmarks de itinerariosEscalas
+  sbt "run escalas all"
+  sbt "run e curso"
+  sbt "run e a b c"
+
+  # Benchmarks de itinerarioSalida
+  sbt "run salida all"
+  sbt "run s curso"
+
+  # Ver ayuda
+  sbt "run help"
+
+MODO 2: Menú interactivo
+------------------------
+
+  sbt run
+
+  Luego seleccionar:
+    1. itinerarios vs itinerariosPar
+    2. itinerariosTiempo vs itinerariosTiempoPar
+    3. itinerariosEscalas vs itinerariosEscalasPar
+    5. itinerarioSalida vs itinerarioSalidaPar
+
+Datasets disponibles:
+  - curso, c    : Ejemplos del enunciado del curso
+  - a           : Dataset A (15 vuelos)
+  - b           : Dataset B (40 vuelos)
+  - c           : Dataset C (100 vuelos)
+  - d           : Dataset D (500 vuelos) ⚠️ CUIDADO: puede agotar memoria
+  - all, todos  : Todos los datasets (excepto D)
 
 ------------------------------------------------------------
-6. Cómo ejecutar las pruebas
+7. Cómo ejecutar las pruebas
 ------------------------------------------------------------
 
 Los archivos dentro de test/scala son scripts .sc.
@@ -151,15 +195,21 @@ Pueden ejecutarse desde IntelliJ usando "Scala Worksheets"
 o desde consola con amm:
 
     amm test/scala/Pruebas.sc
+    amm test/scala/PruebaItinerariosEscalas.sc
 
 ------------------------------------------------------------
-7. Notas finales
+8. Notas finales
 ------------------------------------------------------------
+
 - El dataset D no puede ser procesado completamente por la 
   explosión combinatoria, como se discute en el informe.
+
 - La implementación paralela mejora el rendimiento solo cuando 
-  el número de itinerarios es suficientemente grande (casos grupo C).
+  el número de itinerarios es suficientemente grande (casos C).
+
+- Si usas Java 24, debes actualizar a Scala 2.13.12+ o usar
+  Java 11/17/21 para evitar errores de compilación.
 
 ============================================================
-FIN DEL ARCHIVO README.txt
+FIN DEL ARCHIVO README
 ============================================================

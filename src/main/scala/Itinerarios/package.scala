@@ -1,5 +1,6 @@
 import Datos._
 import common._
+import scala.math.{sqrt, pow}
 
 package object Itinerarios {
 
@@ -113,6 +114,33 @@ package object Itinerarios {
   (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
 }
 
+  def itinerariosEscalas(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    //Busco todos los itinerarios 
+    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
+
+    //Defino la funcion que me da el total de escalas
+    def totalEscalas(itinerario: Itinerario): Int = {
+      val escalasTecnicas = itinerario.map(_.Esc).sum
+      val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
+      escalasTecnicas + transbordos
+    }
+
+  (c1: String, c2: String) => {
+     //Obtengo todos los itinerarios
+     val todosLosItinerarios = buscarItinerarios(c1, c2)
+
+     if (todosLosItinerarios.isEmpty) {
+      Nil
+     } else {
+      //Me quedo con el itinerario con menos escalas
+      val minEscalas = todosLosItinerarios.map(totalEscalas).min
+      //Filtro los itinerarios con menos escalas
+      todosLosItinerarios.filter(it => totalEscalas(it) == minEscalas)
+     }
+    }
+  }
+
+  /*
    def itinerariosBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
     def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
@@ -161,5 +189,6 @@ package object Itinerarios {
 
 
   val itinerariosAire = itinerariosBase(objectivoAire)
+  */
 
 }

@@ -3,10 +3,11 @@ import common._
 import Itinerarios._
 import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ParSeq
+import scala.math.{sqrt, pow}
 
 package object ItinerariosPar {
 
-    def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+  def itinerariosPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
     val vuelosPorOrigen = vuelos.groupBy(_.Org).withDefaultValue(Nil)
 
     // Umbral mínimo para paralelizar y máxima profundidad de paralelismo
@@ -87,6 +88,28 @@ package object ItinerariosPar {
     }
   }
 
+  def itinerariosEscalasPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+    val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
+
+    def totalEscalas(itinerario: Itinerario): Int = {
+      val escalasTecnicas = itinerario.map(_.Esc).sum
+      val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
+      escalasTecnicas + transbordos
+    }
+
+    (c1: String, c2: String) => {
+      val todosLosItinerarios = buscarItinerarios(c1, c2)
+      
+      if(todosLosItinerarios.isEmpty) {
+        Nil
+      } else {
+        val todosLosItinerariosPar = todosLosItinerarios.par
+        val minEscalas = todosLosItinerariosPar.map(totalEscalas).min
+        todosLosItinerariosPar.filter(it => totalEscalas(it) == minEscalas).toList
+      }
+    }
+  }
+
   def itinerarioSalidaPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String, Int, Int) => Itinerario = {
 
     def aMinutos(h: Int, m: Int): Int = h * 60 + m
@@ -143,6 +166,7 @@ package object ItinerariosPar {
     (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
     }
 
+    /*
     def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
       def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
@@ -180,5 +204,5 @@ package object ItinerariosPar {
   }
     
     val itinerariosAirePar = itinerariosParBase(objectivoAire)
-    
+  */
 }
