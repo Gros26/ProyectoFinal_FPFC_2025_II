@@ -1,215 +1,118 @@
-============================================================
-PROYECTO FINAL – Programación Funcional y Paralela (Scala)
-============================================================
+# Proyecto Final - Programación Funcional y Concurrente en Scala
 
-Este archivo describe la estructura del proyecto, los archivos
-incluidos, su propósito y las instrucciones para compilar y 
-ejecutar las distintas partes del programa.
+## Información del Curso
+- **Curso:** Programación Funcional y Concurrente
+- **Período:** 2025-II
+- **Universidad:** Universidad del Valle
 
-------------------------------------------------------------
-1. Requerimientos del sistema
-------------------------------------------------------------
+---
 
-Para ejecutar el proyecto se requiere:
+## Descripción del Proyecto
 
-- Scala 2.13.x
-- SBT (Scala Build Tool)
-- Java 11, 17 o 21 (⚠️ Java 24 no es compatible con Scala 2.13.10)
-- Un entorno compatible como IntelliJ IDEA con plugin de Scala
+Este proyecto consiste en el desarrollo de un **sistema de búsqueda de itinerarios de vuelos** implementado en el lenguaje de programación funcional **Scala**. El sistema permite encontrar rutas óptimas entre aeropuertos considerando diferentes criterios de optimización.
 
-------------------------------------------------------------
-2. Estructura del proyecto
-------------------------------------------------------------
+### Contexto del Problema
 
-El proyecto está organizado de la siguiente manera:
+El sistema trabaja con la información de vuelos comerciales, donde cada vuelo se representa mediante:
+- **Aerolínea (Aln):** Código de dos letras de la aerolínea
+- **Número de vuelo (Num):** Número identificador del vuelo
+- **Origen (Org):** Código del aeropuerto de salida
+- **Hora de salida (HS, MS):** Hora y minutos de salida
+- **Destino (Dst):** Código del aeropuerto de llegada
+- **Hora de llegada (HL, ML):** Hora y minutos de llegada
+- **Escala (Esc):** Número de escalas técnicas del vuelo
 
-src/
- └── main/
-      └── scala/
-           ├── common/
-           │     └── package.scala
-           │
-           ├── Datos/
-           │     ├── package.scala
-           │     ├── VuelosA.scala
-           │     ├── VuelosB.scala
-           │     ├── VuelosC.scala
-           │     └── VuelosD.scala
-           │
-           ├── Itinerarios/
-           │     └── package.scala
-           │
-           ├── ItinerariosPar/
-           │     └── package.scala
-           │
-           ├── Benchmarks.scala
-           └── Main.scala
+Un **itinerario** es una secuencia de vuelos que permite viajar desde un aeropuerto origen hasta un aeropuerto destino, donde el destino de cada vuelo coincide con el origen del siguiente.
 
- └── test/
-      └── scala/
-           ├── Pruebas.sc
-           ├── PruebasItinerarios.sc
-           ├── PruebaItinerariosEscalas.sc
-           ├── pruebasItinerarioSalida.sc
-           ├── PruebasItinerariosTiempo.sc
-           └── PruebasPar.sc
+---
 
-------------------------------------------------------------
-3. Descripción de directorios y módulos
-------------------------------------------------------------
+## Funciones Implementadas
 
-● common/
-  Contiene definiciones y utilidades generales compartidas
-  entre distintos módulos del proyecto (tipos, alias, helpers).
-  Aquí se centralizan elementos que se usan de manera transversal.
+### Versiones Secuenciales
 
-● Datos/
-  Incluye los datasets provistos por el curso (A, B, C, D),
-  cada uno representado como una lista de vuelos declarada en
-  archivos independientes. Estos datos se utilizan en las pruebas
-  del programa y en los benchmarks de rendimiento.
+1. **`itinerarios(vuelos, aeropuertos)(a1, a2)`**
+   - Genera todos los itinerarios posibles entre dos aeropuertos
+   - Retorna una lista de itinerarios sin repetir aeropuertos intermedios
 
-● Itinerarios/
-  Contiene las implementaciones **secuenciales** de las funciones:
-  
-  - `itinerarios`: Construye todos los itinerarios posibles 
-    entre dos aeropuertos sin repetir nodos (caminos simples).
-    Realiza búsqueda exhaustiva DFS con recursión estructural.
-  
-  - `itinerariosTiempo`: Retorna los itinerarios ordenados por
-    tiempo total de viaje.
-  
-  - `itinerariosEscalas`: Retorna los itinerarios con el menor
-    número total de escalas (técnicas + transbordos).
-  
-  - `itinerarioSalida`: Dado un horario de llegada máximo,
-    retorna el itinerario que permite salir más tarde.
+2. **`itinerariosTiempo(vuelos, aeropuertos)(a1, a2)`**
+   - Retorna los 3 itinerarios con menor tiempo total de viaje
+   - El tiempo incluye vuelo y tiempo de espera en conexiones
 
-● ItinerariosPar/
-  Contiene las implementaciones **paralelas**:
-  
-  - `itinerariosPar`: Versión paralela de `itinerarios` con:
-    * Umbrales mínimos de paralelización (UMBRAL_PAR = 4)
-    * Control de profundidad (MAX_PROF_PAR = 2)
-    * División del espacio de búsqueda en tareas independientes
-  
-  - `itinerariosTiempoPar`: Versión paralela de `itinerariosTiempo`.
-  
-  - `itinerariosEscalasPar`: Versión paralela de `itinerariosEscalas`
-    que utiliza colecciones paralelas para filtrar resultados.
-  
-  - `itinerarioSalidaPar`: Versión paralela de `itinerarioSalida`.
+3. **`itinerariosEscalas(vuelos, aeropuertos)(a1, a2)`**
+   - Retorna los 3 itinerarios con menor número de escalas
+   - Considera tanto escalas técnicas como cambios de avión
 
-● Benchmarks.scala
-  Ejecuta mediciones de rendimiento para comparar versiones
-  secuenciales y paralelas usando ScalaMeter. Incluye:
-  
-  - Benchmarks para `itinerarios` vs `itinerariosPar`
-  - Benchmarks para `itinerariosTiempo` vs `itinerariosTiempoPar`
-  - Benchmarks para `itinerariosEscalas` vs `itinerariosEscalasPar`
-  - Benchmarks para `itinerarioSalida` vs `itinerarioSalidaPar`
-  - Soporte para datasets: Curso, A (15), B (40), C (100), D (500)
+4. **`itinerarioSalida(vuelos, aeropuertos)(a1, a2, h, m)`**
+   - Dado un horario límite de llegada (h:m), encuentra el itinerario que permite salir lo más tarde posible
 
-● Main.scala
-  Punto de entrada principal con dos modos de ejecución:
-  
-  1. Línea de comandos: sbt "run [función] [datasets...]"
-  2. Menú interactivo: sbt run
+5. **`itinerariosAire(vuelos, aeropuertos)(a1, a2)`** *(Pendiente)*
+   - Retorna los 3 itinerarios con menor tiempo total en el aire
 
-------------------------------------------------------------
-4. Funciones implementadas
-------------------------------------------------------------
+### Versiones Paralelas
 
-Estado actual de implementación:
+Para cada función secuencial se implementó su versión paralela correspondiente:
+- `itinerariosPar`
+- `itinerariosTiempoPar`
+- `itinerariosEscalasPar`
+- `itinerarioSalidaPar`
+- `itinerariosAirePar` *(Pendiente)*
 
-  ✅ itinerarios / itinerariosPar
-  ✅ itinerariosTiempo / itinerariosTiempoPar
-  ✅ itinerariosEscalas / itinerariosEscalasPar  
-  ✅ itinerarioSalida / itinerarioSalidaPar
-  ⏳ itinerariosAire / itinerariosAirePar (pendiente)
+Las versiones paralelas utilizan el framework de tareas de Scala (ForkJoinPool) para distribuir el trabajo de búsqueda en múltiples hilos.
 
-------------------------------------------------------------
-5. Cómo compilar el proyecto
-------------------------------------------------------------
+---
 
-Desde la raíz del proyecto, ejecutar:
+## Estructura del Proyecto
 
-    sbt compile
+```
+src/main/scala/
+├── common/          # Utilidades para paralelismo (task, parallel)
+├── Datos/           # Datasets de prueba (A, B, C, D)
+├── Itinerarios/     # Implementaciones secuenciales
+├── ItinerariosPar/  # Implementaciones paralelas
+├── Benchmarks.scala # Medición de rendimiento
+└── Main.scala       # Punto de entrada
 
-Esto descargará las dependencias necesarias y compilará todos los
-módulos del proyecto.
+src/test/scala/      # Scripts de prueba (.sc worksheets)
+```
 
-------------------------------------------------------------
-6. Cómo ejecutar los benchmarks
-------------------------------------------------------------
+---
 
-MODO 1: Línea de comandos
--------------------------
+## Entregables
 
-  # Benchmarks de itinerarios
-  sbt "run itinerarios all"
-  sbt "run i curso"
-  sbt "run i a b c"
+1. **Código fuente** en Scala con todas las funciones implementadas
+2. **Pruebas de corrección** que verifican el funcionamiento de cada función
+3. **Benchmarks de rendimiento** comparando versiones secuenciales vs paralelas
+4. **Informe técnico** (main.tex) documentando:
+   - Diseño e implementación de las funciones
+   - Análisis de complejidad
+   - Resultados de las pruebas de rendimiento
+   - Conclusiones sobre la paralelización
 
-  # Benchmarks de itinerariosTiempo
-  sbt "run tiempo all"
-  sbt "run t curso"
+---
 
-  # Benchmarks de itinerariosEscalas
-  sbt "run escalas all"
-  sbt "run e curso"
-  sbt "run e a b c"
+## Tecnologías Utilizadas
 
-  # Benchmarks de itinerarioSalida
-  sbt "run salida all"
-  sbt "run s curso"
+- **Scala 2.13** - Lenguaje de programación funcional
+- **SBT** - Herramienta de construcción
+- **ForkJoinPool** - Framework para paralelismo
+- **LaTeX** - Documentación del informe
 
-  # Ver ayuda
-  sbt "run help"
+---
 
-MODO 2: Menú interactivo
-------------------------
+## Estado de Implementación
 
-  sbt run
+| Función | Secuencial | Paralela |
+|---------|:----------:|:--------:|
+| itinerarios | ✅ | ✅ |
+| itinerariosTiempo | ✅ | ✅ |
+| itinerariosEscalas | ✅ | ✅ |
+| itinerarioSalida | ✅ | ✅ |
+| itinerariosAire | ⏳ | ⏳ |
 
-  Luego seleccionar:
-    1. itinerarios vs itinerariosPar
-    2. itinerariosTiempo vs itinerariosTiempoPar
-    3. itinerariosEscalas vs itinerariosEscalasPar
-    5. itinerarioSalida vs itinerarioSalidaPar
+---
 
-Datasets disponibles:
-  - curso, c    : Ejemplos del enunciado del curso
-  - a           : Dataset A (15 vuelos)
-  - b           : Dataset B (40 vuelos)
-  - c           : Dataset C (100 vuelos)
-  - d           : Dataset D (500 vuelos) ⚠️ CUIDADO: puede agotar memoria
-  - all, todos  : Todos los datasets (excepto D)
+## Repositorio
 
-------------------------------------------------------------
-7. Cómo ejecutar las pruebas
-------------------------------------------------------------
-
-Los archivos dentro de test/scala son scripts .sc.
-Pueden ejecutarse desde IntelliJ usando "Scala Worksheets"
-o desde consola con amm:
-
-    amm test/scala/Pruebas.sc
-    amm test/scala/PruebaItinerariosEscalas.sc
-
-------------------------------------------------------------
-8. Notas finales
-------------------------------------------------------------
-
-- El dataset D no puede ser procesado completamente por la 
-  explosión combinatoria, como se discute en el informe.
-
-- La implementación paralela mejora el rendimiento solo cuando 
-  el número de itinerarios es suficientemente grande (casos C).
-
-- Si usas Java 24, debes actualizar a Scala 2.13.12+ o usar
-  Java 11/17/21 para evitar errores de compilación.
-
-============================================================
-FIN DEL ARCHIVO README
-============================================================
+- **Repositorio:** ProyectoFinal_FPFC_2025_II
+- **Propietario:** Gros26
+- **Rama actual:** itinerariosEscalas
