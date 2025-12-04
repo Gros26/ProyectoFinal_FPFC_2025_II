@@ -140,7 +140,7 @@ package object Itinerarios {
     }
   }
 
-  /*
+  
    def itinerariosBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
     def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
@@ -173,8 +173,12 @@ package object Itinerarios {
     }
     inner
   }
+
   
   def objectivoAire(itinerario: Itinerario): Double = {
+    
+    val codigoApHashMap: HashMap[String, Aeropuerto] = HashMap.from(aeropuertos.map(aeropuerto => aeropuerto.Cod -> aeropuerto))
+
     
     def distAP(Org: Aeropuerto, Dst: Aeropuerto): Double = {
 
@@ -189,6 +193,6 @@ package object Itinerarios {
 
 
   val itinerariosAire = itinerariosBase(objectivoAire)
-  */
+  
 
 }
