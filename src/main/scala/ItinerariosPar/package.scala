@@ -190,10 +190,12 @@ package object ItinerariosPar {
       }
       inner
     }
+
+  val codigoApHashMap: HashMap[String, Aeropuerto] = HashMap.from((aeropuertos ++ aeropuertosCurso).map(aeropuerto => aeropuerto.Cod -> aeropuerto))
+
+
+  def objectivoAire(itinerario: Itinerario): Double = {
     
-    def objectivoAire(itinerario: Itinerario): Double = {
-    
-    val codigoApHashMap: HashMap[String, Aeropuerto] = HashMap.from(aeropuertos.map(aeropuerto => aeropuerto.Cod -> aeropuerto))
 
     def distAP(Org: Aeropuerto, Dst: Aeropuerto): Double = {
 
@@ -206,6 +208,6 @@ package object ItinerariosPar {
     itinerario.map(vueloAire).sum
   }
     
-    val itinerariosAirePar = itinerariosParBase(objectivoAire)
+    def itinerariosAirePar: (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = itinerariosParBase(objectivoAire)
   
 }

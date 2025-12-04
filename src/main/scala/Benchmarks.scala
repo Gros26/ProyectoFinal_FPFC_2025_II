@@ -378,15 +378,112 @@ object Benchmarks {
 
   def compararAire(dataset: String, origen: String, destino: String,
                    vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): Unit = {
-    // TODO: Implementar cuando tengas itinerariosAire e itinerariosAirePar
-    println(f"$dataset%-12s | $origen→$destino%-8s | TODO")
+
+    if (vuelos.isEmpty) {
+      println(f"$dataset%-12s | $origen→$destino%-8s | ${0}%-6d | ${0}%-12d | ${0.0}%.3f | ${0.0}%.3f | N/A")
+      return
+    }
+
+    val itsAire    = itinerariosAire(vuelos, aeropuertos)
+    val itsAirePar = itinerariosAirePar(vuelos, aeropuertos)
+
+    var resultSeq: List[Itinerario] = Nil
+    var resultPar: List[Itinerario] = Nil
+
+    val timeSeq = standardConfig measure {
+      resultSeq = itsAire(origen, destino)
+    }
+
+    val timePar = standardConfig measure {
+      resultPar = itsAirePar(origen, destino)
+    }
+
+    val timeSeqMs = timeSeq.value * 1000.0
+    val timeParMs = timePar.value * 1000.0
+    val speedup   = if (timeParMs == 0.0) Double.PositiveInfinity else timeSeqMs / timeParMs
+    val correct   = resultSeq.toSet == resultPar.toSet
+
+    println(f"$dataset%-12s | $origen→$destino%-8s | ${vuelos.length}%-6d | ${resultSeq.length}%-12d | $timeSeqMs%12.3f | $timeParMs%10.3f | $speedup%6.2fx")
+
+    if (!correct) {
+      println("⚠️  ERROR: Los resultados secuencial y paralelo no coinciden!")
+    }
   }
 
+
   def benchmarkAireCurso(): Unit = {
-    println("\n// Ejemplos del curso:")
-    compararAire("Curso-1", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
-    // ... etc
+    println("\n// Ejemplos del curso (Aire):")
+    compararAire("Curso-A1", "CTG", "PTY", vuelosCurso, aeropuertosCurso)
+    compararAire("Curso-A2", "MAD", "SVO", vuelosCurso, aeropuertosCurso)
+    compararAire("Curso-A3", "CLO", "SVO", vuelosCurso, aeropuertosCurso)
   }
+
+
+  // === DATASET A ===
+  def benchmarkAireA(): Unit = {
+    println("\n// Dataset A1 (15 vuelos):")
+    compararAire("A1-1", "HOU", "MSY", VuelosA.vuelosA1, aeropuertos)
+    compararAire("A1-2", "MSY", "BNA", VuelosA.vuelosA1, aeropuertos)
+    compararAire("A1-3", "DFW", "ORD", VuelosA.vuelosA1, aeropuertos)
+
+    println("\n// Dataset A2:")
+    compararAire("A2-1", "DFW", "ORD", VuelosA.vuelosA2, aeropuertos)
+    compararAire("A2-2", "SFO", "BNA", VuelosA.vuelosA2, aeropuertos)
+    compararAire("A2-3", "PHX", "LAX", VuelosA.vuelosA2, aeropuertos)
+
+    println("\n// Dataset A3:")
+    compararAire("A3-1", "MIA", "HOU", VuelosA.vuelosA3, aeropuertos)
+    compararAire("A3-2", "LAX", "MIA", VuelosA.vuelosA3, aeropuertos)
+    compararAire("A3-3", "DFW", "SFO", VuelosA.vuelosA3, aeropuertos)
+  }
+
+
+  // === DATASET B ===
+  def benchmarkAireB(): Unit = {
+    println("\n// Dataset B1 (40 vuelos):")
+    compararAire("B1-1", "DFW", "ORD", VuelosB.vuelosB1, aeropuertos)
+    compararAire("B1-2", "DFW", "DCA", VuelosB.vuelosB1, aeropuertos)
+    compararAire("B1-3", "ORD", "LAX", VuelosB.vuelosB1, aeropuertos)
+
+    println("\n// Dataset B2:")
+    compararAire("B2-1", "DFW", "ORD", VuelosB.vuelosB2, aeropuertos)
+    compararAire("B2-2", "DFW", "DCA", VuelosB.vuelosB2, aeropuertos)
+    compararAire("B2-3", "ATL", "SEA", VuelosB.vuelosB2, aeropuertos)
+
+    println("\n// Dataset B3:")
+    compararAire("B3-1", "DFW", "ORD", VuelosB.vuelosB3, aeropuertos)
+    compararAire("B3-2", "DFW", "DCA", VuelosB.vuelosB3, aeropuertos)
+    compararAire("B3-3", "ORD", "MIA", VuelosB.vuelosB3, aeropuertos)
+  }
+
+
+  // === DATASET C ===
+  def benchmarkAireC(): Unit = {
+    println("\n// Dataset C1 (100 vuelos):")
+    compararAire("C1-1", "ORD", "TPA", VuelosC.vuelosC1, aeropuertos)
+    compararAire("C1-2", "DFW", "MIA", VuelosC.vuelosC1, aeropuertos)
+    compararAire("C1-3", "ATL", "LAX", VuelosC.vuelosC1, aeropuertos)
+
+    println("\n// Dataset C2:")
+    compararAire("C2-1", "ORD", "TPA", VuelosC.vuelosC2, aeropuertos)
+    compararAire("C2-2", "LAX", "JFK", VuelosC.vuelosC2, aeropuertos)
+    compararAire("C2-3", "SEA", "MIA", VuelosC.vuelosC2, aeropuertos)
+
+    println("\n// Dataset C3:")
+    compararAire("C3-1", "ORD", "TPA", VuelosC.vuelosC3, aeropuertos)
+    compararAire("C3-2", "DFW", "SEA", VuelosC.vuelosC3, aeropuertos)
+    compararAire("C3-3", "ATL", "SFO", VuelosC.vuelosC3, aeropuertos)
+  }
+
+
+  // === DATASET D ===
+  def benchmarkAireD(): Unit = {
+    println("\n// Dataset D (500 vuelos) - Aire:")
+    compararAire("D1-A", "ORD", "LAX", VuelosD.vuelosD1, aeropuertos)
+    compararAire("D2-A", "ORD", "LAX", VuelosD.vuelosD2, aeropuertos)
+    compararAire("D3-A", "ORD", "LAX", VuelosD.vuelosD3, aeropuertos)
+  }
+
 
   // ============================================
   // BENCHMARKS PARA: itinerarioSalida
