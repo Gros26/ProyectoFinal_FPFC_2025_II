@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+\usepackage{graphicx} 
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{minted}
@@ -19,7 +19,7 @@
 \author{
     Sebastian Oviedo \\ \texttt{xxxx} \\
     Juan Moreno \\ \texttt{xxxx} \\
-    Weis Paul \\ \texttt{xxxx} \\
+    Weis Paul \\ \texttt{2513207} \\
     Grosman Klein García Valencia \\ \texttt{2340247}
 }
 \date{Diciembre 2025}
@@ -37,7 +37,6 @@
     showstringspaces=false,
     breaklines=true
 }
-
 
 
 \section{Encontrando itinerarios}
@@ -456,7 +455,7 @@ La función \texttt{itinerarios} calcula correctamente todos los itinerarios pos
 La versión paralela (\texttt{itinerariosPar}) comparte exactamente el mismo límite teórico: el paralelismo distribuye el trabajo entre varios núcleos y puede acelerar el cálculo, pero no reduce la cantidad total de itinerarios ni la memoria necesaria para representarlos. Si para una ruta determinada existen, por ejemplo, diez millones de itinerarios posibles, tanto la versión secuencial como la paralela necesitarán espacio para almacenar esos diez millones de resultados. La paralelización únicamente ayuda a calcularlos más rápido, pero no modifica la explosión combinatoria del problema ni resuelve la limitación de espacio. Este análisis muestra que, en problemas de enumeración exhaustiva, la paralelización tiene un alcance limitado y que, para instancias muy grandes, sería necesario considerar enfoques alternativos (por ejemplo, búsqueda de rutas óptimas sin enumerar todas las posibilidades).
 
 
-\section{Encontrando los itinerarios de menor tiempo total}
+\section{Minimización de tiempo total de viaje}
 
 Sea $f_T : (String \times String) \to List[Itinerario]$ la función que,
 dados dos códigos de aeropuerto $c_1$ y $c_2$, devuelve los \emph{tres
@@ -1015,6 +1014,387 @@ El paralelismo únicamente acelera el cómputo, pero no resuelve el crecimiento 
 problema. Esto demuestra que, para instancias muy grandes, sería necesario considerar enfoques alternativos
 que no requieran enumerar todas las rutas antes de seleccionar las mejores (por ejemplo, algoritmos de
 búsqueda heurística u optimización sin exploración exhaustiva).
+
+\section{Minimización de escalas}
+
+Sea $f : (String \times String) \to List[Itinerario]$ la función que dados dos códigos de aeropuerto $c_1$ y $c_2$, devuelve una lista de itinerarios que:
+
+\begin{enumerate}
+    \item Son itinerarios válidos desde $c_1$ hasta $c_2$.
+    \item Entre todos los que cumplen (1), tienen el número mínimo de escalas totales (sumando escalas técnicas y transbordos).
+\end{enumerate}
+
+Se tiene la implementación en Scala:
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosEscalas(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+
+    // Busco todos los itinerarios 
+    val buscarItinerarios = itinerarios(vuelos, aeropuertos)
+
+    // Defino la funcion que me da el total de escalas
+    def totalEscalas(itinerario: Itinerario): Int = {
+      val escalasTecnicas = itinerario.map(_.Esc).sum
+      val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
+      escalasTecnicas + transbordos
+    }
+
+  (c1: String, c2: String) => {
+     // Obtengo todos los itinerarios
+     val todosLosItinerarios = buscarItinerarios(c1, c2)
+
+     if (todosLosItinerarios.isEmpty) {
+      Nil
+     } else {
+      // Me quedo con el itinerario con menos escalas
+      val minEscalas = todosLosItinerarios.map(totalEscalas).min
+      // Filtro los itinerarios con menos escalas
+      todosLosItinerarios.filter(it => totalEscalas(it) == minEscalas)
+     }
+    }
+  }
+\end{minted}
+
+\subsection{Demostración de Corrección}
+
+\subsubsection{Definiciones Auxiliares}
+
+Sea $Esc : Vuelo \to \mathbb{N}$ la función que devuelve el número de escalas técnicas de un vuelo.
+
+Sea $escalasTecnicas : Itinerario \to \mathbb{N}$ definida como:
+$$escalasTecnicas(it) = \sum_{v \in it} Esc(v)$$
+
+Sea $transbordos : Itinerario \to \mathbb{N}$ definida como:
+$$transbordos(it) = \begin{cases}
+0 & \text{si } it = [] \\
+|it| - 1 & \text{si } |it| > 0
+\end{cases}$$
+donde $|it|$ denota la longitud de la lista (número de vuelos).
+
+Sea $totalEscalas : Itinerario \to \mathbb{N}$ la función de costo total:
+$$totalEscalas(it) = escalasTecnicas(it) + transbordos(it)$$
+
+\subsubsection{Especificación Formal}
+
+Sea $I_{c_1,c_2}$ el conjunto de todos los itinerarios válidos de $c_1$ a $c_2$ generado por la función \texttt{itinerarios}.
+
+La función $f$ debe devolver el subconjunto de $I_{c_1,c_2}$ que minimiza la función de costo $totalEscalas$.
+
+Formalmente:
+Let $minCost = \min \{ totalEscalas(it) \mid it \in I_{c_1,c_2} \}$
+
+$$f(c_1, c_2) = \begin{cases}
+[] & \text{si } I_{c_1,c_2} = \emptyset \\
+\{ it \in I_{c_1,c_2} \mid totalEscalas(it) = minCost \} & \text{en otro caso}
+\end{cases}$$
+
+\subsubsection{Teorema de Corrección}
+
+\textbf{Teorema 1:} La función \texttt{itinerariosEscalas} implementa correctamente la especificación $f$.
+
+\textbf{Demostración:}
+
+\textbf{Caso 1: $I_{c_1,c_2} = \emptyset$ (no existe ningún itinerario)}
+
+Si la búsqueda de itinerarios no retorna resultados:
+
+\begin{align*}
+\text{buscarItinerarios}(c_1, c_2) &\to \text{val todosLosItinerarios} = [] \\
+&\to \text{if (todosLosItinerarios.isEmpty) Nil} \\
+&\to []
+\end{align*}
+
+Por especificación: $f(c_1, c_2) = []$. El código cumple la especificación. \quad 
+
+\[\]
+
+\textbf{Caso 2: $I_{c_1,c_2} \neq \emptyset$ (existen itinerarios)}
+
+El código procede en dos pasos:
+
+1. \textbf{Cálculo del Mínimo Global:}
+   La expresión \texttt{todosLosItinerarios.map(totalEscalas).min} computa:
+   $$m = \min_{it \in I_{c_1,c_2}} (totalEscalas(it))$$
+   Esto corresponde exactamente a la definición de $minCost$ en la especificación formal. Dado que la lista no es vacía, la operación \texttt{.min} es segura.
+
+2. \textbf{Filtrado de Soluciones Óptimas:}
+   La expresión \texttt{todosLosItinerarios.filter(it => totalEscalas(it) == minEscalas)} construye una nueva lista que contiene un itinerario $it$ si y solo si:
+   $$it \in I_{c_1,c_2} \land totalEscalas(it) = m$$
+
+Esto produce exactamente el conjunto:
+$$\{ it \in I_{c_1,c_2} \mid totalEscalas(it) = minCost \}$$
+
+\textbf{Conclusión:} La función \texttt{itinerariosEscalas} satisface la especificación formal, garantizando que todos los itinerarios devueltos son óptimos respecto al número de escalas. \quad 
+
+
+\subsection{Versión Paralela}
+
+La versión paralela, \texttt{itinerariosEscalasPar}, utiliza la estrategia de paralelismo de datos para acelerar tanto el cálculo de los costos como el filtrado de los resultados.
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosEscalasPar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+      
+      val buscarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+
+      def totalEscalas(itinerario: Itinerario): Int = {
+        val escalasTecnicas = itinerario.map(_.Esc).sum
+        val transbordos = if (itinerario.nonEmpty) itinerario.length - 1 else 0
+        escalasTecnicas + transbordos
+      }
+
+      (c1: String, c2: String) => {
+        val todosLosItinerarios = buscarItinerariosPar(c1, c2)
+        
+        if(todosLosItinerarios.isEmpty) {
+          Nil
+        } else {
+          // Conversión a colección paralela
+          val todosLosItinerariosPar = todosLosItinerarios.par
+          
+          // Reducción paralela para encontrar el mínimo
+          val minEscalas = todosLosItinerariosPar.map(totalEscalas).min
+          
+          // Filtrado paralelo
+          todosLosItinerariosPar.filter(it => totalEscalas(it) == minEscalas).toList
+        }
+      }
+    }
+\end{minted}
+
+\subsubsection{Justificación y Equivalencia}
+
+\textbf{Teorema 2:} Las versiones secuencial y paralela son funcionalmente equivalentes:
+$$\forall c_1, c_2 : \text{itinerariosEscalasPar}(\ldots)(c_1, c_2) = \text{itinerariosEscalas}(\ldots)(c_1, c_2)$$
+
+\textbf{Demostración:}
+
+La equivalencia se basa en la pureza referencial de la función auxiliar \texttt{totalEscalas} y en las propiedades de las colecciones paralelas de Scala.
+
+1. \textbf{Independencia de Datos:} La función \texttt{totalEscalas(it)} depende exclusivamente del argumento \texttt{it}. No accede ni modifica variables globales. Esto permite que la operación \texttt{map} en la línea 23 se ejecute en cualquier orden o simultáneamente sobre distintos elementos sin cambiar el resultado.
+
+2. \textbf{Asociatividad del Mínimo:} La operación \texttt{min} es asociativa. Para un conjunto de valores, el mínimo global puede encontrarse calculando mínimos locales en subconjuntos y luego el mínimo de esos resultados. Las colecciones paralelas explotan esta propiedad mediante árboles de reducción.
+
+3. \textbf{Determinismo del Filtrado:} El predicado \texttt{totalEscalas(it) == minEscalas} es determinista. La operación \texttt{filter} en paralelo produce el mismo subconjunto de elementos que su contraparte secuencial, aunque el orden interno de procesamiento difiera (el orden final se reconstruye o se ignora si se considera como conjunto, aunque \texttt{.toList} preserva el orden relativo original en las implementaciones estándar de Scala ParSeq).
+
+Por tanto, la paralelización mediante \texttt{.par} preserva la semántica del programa original, mejorando potencialmente el rendimiento en conjuntos de datos grandes ($|I_{c_1,c_2}| >> 1000$) al distribuir la carga computacional en múltiples núcleos. \quad
+
+\subsection{Análisis Comparativo de REndimiento}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|c|c|c|r|r|r|}
+\hline
+\textbf{Dataset} & \textbf{Ruta} & \textbf{Vuelos} & \textbf{Itinerarios} & \textbf{T.secuencial} & \textbf{T.paralelo} & \textbf{Speedup} \\
+ & \textbf{(cod1--cod2)} & & \textbf{encontrados} & \textbf{(ms)} & \textbf{(ms)} & \\
+\hline
+A1-1 & HOU $\to$ MSY & 15 & 3 & 227,390 & 2044,080 & 0,11x \\
+A1-2 & MSY $\to$ BNA & 15 & 1 & 625,930 & 640,760 & 0,98x \\
+A1-3 & DFW $\to$ ORD & 15 & 1 & 65,300 & 1874,480 & 0,03x \\
+A2-1 & DFW $\to$ ORD & 15 & 1 & 78,940 & 791,210 & 0,10x \\
+A2-2 & SFO $\to$ BNA & 15 & 0 & 88,810 & 41,380 & 2,15x \\
+A2-3 & PHX $\to$ LAX & 15 & 1 & 26,760 & 715,250 & 0,04x \\
+A3-1 & MIA $\to$ HOU & 15 & 1 & 29,310 & 569,590 & 0,05x \\
+A3-2 & LAX $\to$ MIA & 15 & 1 & 19,230 & 842,200 & 0,02x \\
+A3-3 & DFW $\to$ SFO & 15 & 1 & 23,170 & 730,190 & 0,03x \\
+\hline
+\end{tabular}
+\caption{Resultados de tiempos y speedup por ruta}
+\label{tab:resultados_rutas}
+\end{table}
+
+Los resultados experimentales presentados en la Tabla \ref{tab:resultados_rutas} muestran un patrón de rendimiento claro para la función \texttt{itinerariosEscalas} sobre el dataset pequeño (Grupo A, 15 vuelos). Debido a la naturaleza del problema y al tamaño reducido del grafo, la versión paralela es consistentemente más lenta que la secuencial en la mayoría de los casos, con \textit{speedups} que oscilan generalmente entre 0.02x y 0.11x.
+
+Esto se debe a que, para la mayoría de las rutas (como A1-3, A2-1, A2-3 y todo el grupo A3), la búsqueda secuencial es extremadamente rápida (menos de 80 ms). En estos escenarios, el costo computacional de encontrar el itinerario y calcular sus escalas es trivial en comparación con el \textit{overhead} introducido por la creación de colecciones paralelas (\texttt{.par}), la gestión de hilos y la sincronización de tareas. La paralelización de la fase de filtrado y reducción (\texttt{map} y \texttt{min}) no aporta beneficios cuando se opera sobre listas con muy pocos elementos (1 a 3 itinerarios).
+
+Sin embargo, se observan dos excepciones significativas que rompen esta tendencia:
+
+\begin{enumerate}
+    \item \textbf{Caso A1-2 (MSY $\to$ BNA):} Presenta un \textit{speedup} de 0.98x, alcanzando prácticamente la paridad. A diferencia de las otras rutas con 1 itinerario, aquí el tiempo secuencial es alto (625 ms), lo que sugiere una búsqueda más compleja en el grafo antes de encontrar la solución. Al aumentar la carga computacional, el costo relativo de la gestión paralela disminuye, permitiendo que el tiempo paralelo (640 ms) se acerque al secuencial.
+    
+    \item \textbf{Caso A2-2 (SFO $\to$ BNA):} Este es el único caso donde el paralelismo resulta beneficioso, logrando un \textit{speedup} de 2.15x. La característica clave es que no se encontró ningún itinerario válido (0 resultados). Esto implica que se evita completamente el \textit{overhead} de la fase de reducción y filtrado de la lista de resultados. Además, la exploración concurrente del espacio de búsqueda para descartar todas las posibilidades parece haber sido más eficiente que la exploración lineal en este caso particular.
+\end{enumerate}
+
+En conclusión, para datasets pequeños, la estrategia \texttt{itinerariosEscalasPar} resulta generalmente ineficiente debido a que el grano de paralelismo es demasiado fino para la baja carga de trabajo, a menos que la complejidad de la búsqueda sea elevada o el conjunto de soluciones sea vacío.
+
+\section{Minimización del tiempo en aire}
+
+Sea $f_{aire} : (String \times String) \to List[Itinerario]$ la función que, dados dos códigos de aeropuerto $c_1$ y $c_2$, devuelve los tres itinerarios que minimizan el tiempo de vuelo, el cual es proporcional a la distancia recorrida.
+
+A diferencia de la minimización de tiempo total (que incluye esperas), esta función busca la ruta espacialmente más corta. Para ello, se asume un plano cartesiano 2D para las coordenadas de los aeropuertos.
+
+La implementación en Scala es la siguiente:
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+
+  val generarItinerarios = itinerarios(vuelos, aeropuertos)
+
+  def distancia(org: Aeropuerto, dst: Aeropuerto): Double = {
+    Math.sqrt(Math.pow(org.X - dst.X, 2) + Math.pow(org.Y - dst.Y, 2))
+  }
+
+  def tiempoAireTotal(it: Itinerario): Double = {
+    it.map { v =>
+      val aeroOrg = aeropuertos.find(_.Cod == v.Org).get
+      val aeroDst = aeropuertos.find(_.Cod == v.Dst).get
+      distancia(aeroOrg, aeroDst)
+    }.sum
+  }
+
+  (cod1: String, cod2: String) => {
+    val todos = generarItinerarios(cod1, cod2)
+    val ordenados = todos.sortBy(tiempoAireTotal)
+    ordenados.take(3)
+  }
+}
+\end{minted}
+
+\subsection{Demostración de Correctitud}
+
+La demostración se sustenta en la correcta modelación matemática de la distancia y la propiedad de orden.
+
+\subsubsection{Correctitud de la función de costo}
+
+\textbf{Requerimiento:} Minimizar el tiempo en el aire, proporcional a la distancia recorrida.
+
+\textbf{Análisis:}
+La implementación utiliza la fórmula de la distancia euclidiana en el plano cartesiano 2D para calcular la distancia entre dos aeropuertos $Org$ y $Dst$:
+\[ d(Org, Dst) = \sqrt{(Org_x - Dst_x)^2 + (Org_y - Dst_y)^2} \]
+
+Sea $I$ un itinerario compuesto por una secuencia de vuelos $\langle v_1, v_2, \dots, v_k \rangle$. La función de costo total $f_{aire}$ se define como la suma de las distancias de cada segmento:
+
+\[ f_{aire}(I) = \sum_{v \in I} d(Aeropuerto(v.Org), Aeropuerto(v.Dst)) \]
+
+Dado que la distancia euclidiana satisface la desigualdad triangular y la no-negatividad, la suma de distancias representa correctamente la longitud total del trayecto espacial. Minimizar esta suma equivale a encontrar la ruta espacialmente más corta.
+
+\subsubsection{Correctitud de la selección}
+
+Al igual que en las funciones anteriores, `itinerariosAire` genera primero el conjunto completo de itinerarios válidos $T = f(c_1, c_2)$ (cuya correctitud fue demostrada en la Sección 1).
+Posteriormente aplica `sortBy` usando la función $f_{aire}$. Dado que $f_{aire}$ devuelve un valor `Double` consistente para cada itinerario, el ordenamiento garantiza que los primeros elementos de la lista resultante sean aquellos con la menor distancia acumulada.
+
+\subsection{Versión Paralela y Equivalencia}
+
+La versión paralela, `itinerariosAirePar`, sigue el mismo esquema de descomposición que las funciones anteriores, pero aprovecha el paralelismo de datos de manera más intensiva debido al costo computacional de la función objetivo.
+
+\begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
+def itinerariosAirePar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
+    (String, String) => List[Itinerario] = {
+
+  // Utiliza la versión paralela para generar el espacio de búsqueda
+  val generarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+
+  // ... (definición de distancia y tiempoAireTotal idéntica a secuencial) ...
+
+  (cod1: String, cod2: String) => {
+    val todos = generarItinerariosPar(cod1, cod2)
+
+    // Evaluación paralela de la función de costo (floating point)
+    val ordenados = todos.par
+      .map(it => (tiempoAireTotal(it), it))
+      .toList
+      .sortBy(_._1)
+      .map(_._2)
+
+    ordenados.take(3)
+  }
+}
+\end{minted}
+
+\subsubsection{Demostración de Equivalencia Algorítmica}
+
+Deseamos demostrar que:
+\[ \texttt{itinerariosAirePar} \equiv \texttt{itinerariosAire} \]
+
+\textbf{1. Equivalencia en la Generación:}
+Sabemos por el Teorema 3 que el conjunto de itinerarios generado es idéntico: $I_{par} = I_{sec}$.
+
+\textbf{2. Equivalencia en la Evaluación:}
+La versión paralela computa el costo mediante un mapeo paralelo:
+\[ V_{costos} = I.par.map(f_{aire}) \]
+A diferencia de `itinerariosTiempo` donde el costo es una resta de enteros, aquí $f_{aire}$ implica operaciones de punto flotante (raíz cuadrada y potencias). Sin embargo, $f_{aire}$ es una función pura. La operación `map` en colecciones paralelas garantiza que se aplica la función a todos los elementos. Al convertir de nuevo a lista secuencial (`toList`) y ordenar, se garantiza el mismo resultado que la versión secuencial, dado que el orden relativo final depende únicamente de los valores calculados.
+
+\subsection{Análisis comparativo de desempeño}
+
+\begin{longtable}{lcccccc}
+\caption{Comparación de desempeño: versión secuencial vs paralela (itinerariosAire)}\\
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endfirsthead
+
+\toprule
+Dataset & Ruta (cod1--cod2) & Vuelos & Itinerarios encontrados & T. secuencial (ms) & T. paralelo (ms) & Speedup \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{7}{r}{\small Continúa en la siguiente página} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+Curso-A1 & MID--SVCS & 16  & 1 & 5.120 & 72.340 & 0.07 \\
+Curso-A2 & CLO--SVO & 16  & 4 & 24.150 & 165.890 & 0.15 \\
+Curso-A3 & CTG--PTY & 16  & 2 & 7.430 & 130.120 & 0.06 \\
+\midrule
+
+A1-1 & HOU--MSY & 15  & 5 & 55.200 & 410.550 & 0.13 \\
+A1-2 & MSY--BNA & 15  & 1 & 41.100 & 195.300 & 0.21 \\
+A1-3 & DFW--ORD & 15  & 1 & 7.850  & 142.600 & 0.06 \\
+\midrule
+
+A2-1 & DFW--ORD & 15  & 2 & 10.950 & 192.400 & 0.06 \\
+A2-2 & SFO--BNA & 15  & 0 & 13.200 & 95.150  & 0.14 \\
+A2-3 & PHX--LAX & 15  & 1 & 17.100 & 168.200 & 0.10 \\
+\midrule
+
+B1-1 & DFW--ORD & 40  & 16 & 31.400 & 255.600 & 0.12 \\
+B1-2 & DFW--DCA & 40  & 29 & 58.900 & 460.200 & 0.13 \\
+B1-3 & ORD--LAX & 40  & 3  & 7.200  & 99.800  & 0.07 \\
+\midrule
+
+B2-1 & DFW--ORD & 40  & 9  & 4.800  & 125.300 & 0.04 \\
+B2-2 & DFW--DCA & 40  & 9  & 26.500 & 152.100 & 0.17 \\
+B2-3 & ATL--SEA & 40  & 0  & 5.100  & 28.400  & 0.18 \\
+\midrule
+
+C1-1 & ORD--TPA & 100 & 1470 & 4890.500 & 1680.200 & 2.91 \\
+C1-2 & DFW--MIA & 100 & 1369 & 5320.100 & 1950.400 & 2.73 \\
+C1-3 & ATL--LAX & 100 & 676  & 1850.300 & 890.150  & 2.08 \\
+\midrule
+
+C2-1 & ORD--TPA & 100 & 246  & 2580.600 & 1350.800 & 1.91 \\
+C2-2 & LAX--JFK & 100 & 0    & 810.200  & 680.400  & 1.19 \\
+C2-3 & SEA--MIA & 100 & 1605 & 3150.800 & 1120.500 & 2.81 \\
+\midrule
+
+C3-1 & ORD--TPA & 100 & 2944 & 4820.400 & 1410.600 & 3.42 \\
+C3-2 & DFW--SEA & 100 & 236  & 4010.200 & 1250.800 & 3.21 \\
+C3-3 & ATL--SFO & 100 & 2939 & 2990.500 & 880.200  & 3.40 \\
+\end{longtable}
+
+\textbf{Análisis de Resultados}
+
+La función `itinerariosAire` introduce una carga computacional adicional por itinerario respecto a las funciones anteriores: el cálculo de la distancia euclidiana ($\sqrt{x^2 + y^2}$) para cada segmento de vuelo.
+
+\textbf{Comportamiento en Datasets Pequeños y Medianos (A y B):}
+Se observa un patrón consistente con los análisis previos: para grafos con pocos vuelos y un número reducido de itinerarios resultantes, la versión secuencial es superior. Los \emph{speedups} oscilan entre 0.04x y 0.21x. Cuando el número de itinerarios es trivial, el costo de particionar los datos y gestionar los hilos para calcular unas pocas distancias supera al cálculo secuencial directo.
+
+\textbf{Comportamiento en Datasets Grandes (C):}
+En los escenarios del grupo C, donde el número de itinerarios encontrados asciende a miles (p.ej., 2944 en C3-1), la versión paralela demuestra su mayor eficacia hasta el momento, con \emph{speedups} que alcanzan hasta \textbf{3.42x}.
+
+Este rendimiento superior se explica por la combinación de dos factores:
+\begin{enumerate}
+    \item \textbf{Generación Acelerada:} La fase de búsqueda utiliza `itinerariosPar`, eficiente en grafos densos.
+    \item \textbf{Evaluación Costosa:} A diferencia de `itinerariosTiempo`, donde la función de costo es simple, `itinerariosAire` realiza operaciones aritméticas de punto flotante. Al tener miles de itinerarios, la fase de mapeo paralelo distribuye esta carga significativa entre los núcleos.
+\end{enumerate}
+
+Es notable que en casos como C3-1 y C3-3, el speedup es superior al observado en la optimización de tiempo (que rondaba los 2.6x). Esto confirma que cuanto más costosa sea la función objetivo a evaluar por ruta, mayor es el beneficio de utilizar colecciones paralelas.
 
 \section{Optimización de la hora de salida}
 

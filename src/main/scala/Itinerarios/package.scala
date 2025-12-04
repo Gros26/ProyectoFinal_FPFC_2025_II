@@ -1,5 +1,6 @@
 import Datos._
 import common._
+import scala.math.{sqrt, pow}
 
 package object Itinerarios {
 
@@ -138,4 +139,56 @@ package object Itinerarios {
      }
     }
   }
+
+  /*
+   def itinerariosBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
+    def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+      val todosItsFunc = itinerarios(vuelos, aeropuertos)
+
+
+      def buscar(actual: String, destino: String): List[Itinerario] = {
+
+        def findMins(l: List[(Double, Itinerario)], min_candidate: Double, its_candidate: List[Itinerario]): List[Itinerario] = {
+          if (l.isEmpty) {
+            its_candidate
+          } else if (l.head._1 < min_candidate) {
+            findMins(l.tail, l.head._1, List(l.head._2))
+          } else if (l.head._1 == min_candidate) {
+            findMins(l.tail, min_candidate, its_candidate :+ l.head._2)
+          } else {
+            findMins(l.tail, min_candidate, its_candidate)
+          }
+        }
+
+        val todosIts = todosItsFunc(actual, destino)
+
+        val todosObjIts = todosIts.map(it => (objective_function(it), it))
+        findMins(todosObjIts, Double.MaxValue, List())
+
+      }
+
+
+      buscar
+    }
+    inner
+  }
+  
+  def objectivoAire(itinerario: Itinerario): Double = {
+    
+    def distAP(Org: Aeropuerto, Dst: Aeropuerto): Double = {
+
+      sqrt(pow(Org.X - Dst.X, 2) + pow(Org.Y - Dst.Y, 2))
+    }
+
+    def vueloAire(vuelo: Vuelo): Double = {
+      distAP(codigoApHashMap(vuelo.Org), codigoApHashMap(vuelo.Dst))
+    }
+    itinerario.map(vueloAire).sum
+  }
+
+
+  val itinerariosAire = itinerariosBase(objectivoAire)
+  */
+
 }
