@@ -109,6 +109,3 @@ src/test/scala/      # Scripts de prueba (.sc worksheets)
 | itinerarioSalida | ✅ | ✅ |
 | itinerariosAire | ⏳ | ⏳ |
 
-- **Repositorio:** ProyectoFinal_FPFC_2025_II
-- **Propietario:** Gros26
-- **Rama actual:** itinerariosEscalas
