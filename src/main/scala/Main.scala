@@ -31,9 +31,13 @@ object Main extends App {
         ejecutarDatasets(datasets, ejecutarEscalas)
         Benchmarks.imprimirPie()
         
+
       case "aire" | "a" =>
-        println("⚠️  Función no implementada aún")
-        
+        Benchmarks.imprimirEncabezado("ITINERARIOS_AIRE vs ITINERARIOS_AIRE_PAR")
+        ejecutarDatasets(datasets, ejecutarAire)
+        Benchmarks.imprimirPie()
+
+
       case "salida" | "s" =>
         println("⚠️  Función no implementada aún")
         
@@ -96,6 +100,25 @@ object Main extends App {
       case _ => println(s"⚠️  Dataset desconocido: $dataset")
     }
   }
+
+  def ejecutarAire(dataset: String): Unit = {
+    dataset.toLowerCase match {
+      case "curso" | "c" => Benchmarks.benchmarkAireCurso()
+      case "a" | "a1" | "a2" | "a3" => Benchmarks.benchmarkAireA()
+      case "b" | "b1" | "b2" | "b3" => Benchmarks.benchmarkAireB()
+      case "c" | "c1" | "c2" | "c3" => Benchmarks.benchmarkAireC()
+      case "d" | "d1" | "d2" | "d3" => Benchmarks.benchmarkAireD()
+      case "all" | "todos" =>
+        Benchmarks.benchmarkAireCurso()
+        Benchmarks.benchmarkAireA()
+        Benchmarks.benchmarkAireB()
+        Benchmarks.benchmarkAireC()
+        Benchmarks.benchmarkAireD()
+      case _ =>
+        println(s"⚠️  Dataset desconocido: $dataset")
+    }
+  }
+
 
   def mostrarAyuda(): Unit = {
     println("""
@@ -200,8 +223,18 @@ object Main extends App {
           }
           
         case "4" =>
-          println("\n⚠️  Esta función aún no está implementada.")
-          
+          val datasets = seleccionarDatasets()
+          if (datasets.nonEmpty) {
+            Benchmarks.imprimirEncabezado("ITINERARIOS_AIRE vs ITINERARIOS_AIRE_PAR")
+            if (datasets.contains(1)) Benchmarks.benchmarkAireCurso()
+            if (datasets.contains(2)) Benchmarks.benchmarkAireA()
+            if (datasets.contains(3)) Benchmarks.benchmarkAireB()
+            if (datasets.contains(4)) Benchmarks.benchmarkAireC()
+            if (datasets.contains(5)) Benchmarks.benchmarkAireD()
+            Benchmarks.imprimirPie()
+          }
+
+
         case _ =>
           println("❌ Opción inválida. Intente de nuevo.")
       }
