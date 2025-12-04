@@ -4,6 +4,7 @@ import Itinerarios._
 import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ParSeq
 import scala.math.{sqrt, pow}
+import scala.collection.immutable.HashMap 
 
 package object ItinerariosPar {
 

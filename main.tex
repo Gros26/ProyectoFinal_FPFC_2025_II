@@ -17,10 +17,10 @@
   \large \textbf{El problema de la planificación de vuelos}}
   
 \author{
-    Sebastian Oviedo \\ \texttt{xxxx} \\
-    Juan Moreno \\ \texttt{xxxx} \\
+    Sebastian Oviedo \\ \texttt{2417575} \\
+    Juan Moreno \\ \texttt{2417575} \\
     Weis Paul \\ \texttt{2513207} \\
-    Grosman Klein García Valencia \\ \texttt{2340247}
+    Grosman García \\ \texttt{2340247}
 }
 \date{Diciembre 2025}
 
@@ -1227,29 +1227,55 @@ A diferencia de la minimización de tiempo total (que incluye esperas), esta fun
 La implementación en Scala es la siguiente:
 
 \begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
-def itinerariosAire(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
-    (String, String) => List[Itinerario] = {
 
-  val generarItinerarios = itinerarios(vuelos, aeropuertos)
+   def itinerariosBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
+    def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
-  def distancia(org: Aeropuerto, dst: Aeropuerto): Double = {
-    Math.sqrt(Math.pow(org.X - dst.X, 2) + Math.pow(org.Y - dst.Y, 2))
+      val todosItsFunc = itinerarios(vuelos, aeropuertos)
+
+
+      def buscar(actual: String, destino: String): List[Itinerario] = {
+
+        def findMins(l: List[(Double, Itinerario)], min_candidate: Double, its_candidate: List[Itinerario]): List[Itinerario] = {
+          if (l.isEmpty) {
+            its_candidate
+          } else if (l.head._1 < min_candidate) {
+            findMins(l.tail, l.head._1, List(l.head._2))
+          } else if (l.head._1 == min_candidate) {
+            findMins(l.tail, min_candidate, its_candidate :+ l.head._2)
+          } else {
+            findMins(l.tail, min_candidate, its_candidate)
+          }
+        }
+
+        val todosIts = todosItsFunc(actual, destino)
+
+        val todosObjIts = todosIts.map(it => (objective_function(it), it))
+        findMins(todosObjIts, Double.MaxValue, List())
+
+      }
+
+
+      buscar
+    }
+    inner
   }
 
-  def tiempoAireTotal(it: Itinerario): Double = {
-    it.map { v =>
-      val aeroOrg = aeropuertos.find(_.Cod == v.Org).get
-      val aeroDst = aeropuertos.find(_.Cod == v.Dst).get
-      distancia(aeroOrg, aeroDst)
-    }.sum
+  def objectivoAire(itinerario: Itinerario): Double = {
+
+    def distAP(Org: Aeropuerto, Dst: Aeropuerto): Double = {
+
+      sqrt(pow(Org.X - Dst.X, 2) + pow(Org.Y - Dst.Y, 2))
+    }
+
+    def vueloAire(vuelo: Vuelo): Double = {
+      distAP(codigoApHashMap(vuelo.Org), codigoApHashMap(vuelo.Dst))
+    }
+    itinerario.map(vueloAire).sum
   }
 
-  (cod1: String, cod2: String) => {
-    val todos = generarItinerarios(cod1, cod2)
-    val ordenados = todos.sortBy(tiempoAireTotal)
-    ordenados.take(3)
-  }
-}
+
+  val itinerariosAire = itinerariosBase(objectivoAire)
 \end{minted}
 
 \subsection{Demostración de Correctitud}
@@ -1280,27 +1306,31 @@ Posteriormente aplica `sortBy` usando la función $f_{aire}$. Dado que $f_{aire}
 La versión paralela, `itinerariosAirePar`, sigue el mismo esquema de descomposición que las funciones anteriores, pero aprovecha el paralelismo de datos de manera más intensiva debido al costo computacional de la función objetivo.
 
 \begin{minted}[linenos,fontsize=\small,breaklines,frame=lines]{scala}
-def itinerariosAirePar(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): 
-    (String, String) => List[Itinerario] = {
+def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
+      def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
 
-  // Utiliza la versión paralela para generar el espacio de búsqueda
-  val generarItinerariosPar = itinerariosPar(vuelos, aeropuertos)
+        val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
 
-  // ... (definición de distancia y tiempoAireTotal idéntica a secuencial) ...
+        (c1: String, c2: String) => {
+          val todosLosItinerarios = buscarItinerarios(c1, c2)
 
-  (cod1: String, cod2: String) => {
-    val todos = generarItinerariosPar(cod1, cod2)
+          if (todosLosItinerarios.isEmpty) {
+            Nil
+          } else if (top_k == 0) {
+            val todosLosItinerariosPar = todosLosItinerarios.par
+            val valor_optimo = todosLosItinerariosPar.map(objective_function).min
+            todosLosItinerariosPar.filter(it => objective_function(it) == valor_optimo).toList
+          } else {
+            todosLosItinerarios.sortBy(objective_function).take(top_k)
+          }
 
-    // Evaluación paralela de la función de costo (floating point)
-    val ordenados = todos.par
-      .map(it => (tiempoAireTotal(it), it))
-      .toList
-      .sortBy(_._1)
-      .map(_._2)
+        }
+      }
+      inner
+    }
 
-    ordenados.take(3)
-  }
-}
+
+    val itinerariosAirePar = itinerariosParBase(objectivoAire)
 \end{minted}
 
 \subsubsection{Demostración de Equivalencia Algorítmica}
