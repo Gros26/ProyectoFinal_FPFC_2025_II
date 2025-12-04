@@ -142,4 +142,43 @@ package object ItinerariosPar {
 
     (cod1: String, cod2: String, HL: Int, ML: Int) => buscar(cod1, cod2, HL, ML)
     }
+
+    def itinerariosParBase(objective_function: Itinerario => Double, top_k: Int = 0): (List[Vuelo], List[Aeropuerto]) => (String, String) => List[Itinerario] = {
+      def inner(vuelos: List[Vuelo], aeropuertos: List[Aeropuerto]): (String, String) => List[Itinerario] = {
+
+        val buscarItinerarios = itinerariosPar(vuelos, aeropuertos)
+
+        (c1: String, c2: String) => {
+          val todosLosItinerarios = buscarItinerarios(c1, c2)
+
+          if (todosLosItinerarios.isEmpty) {
+            Nil
+          } else if (top_k == 0) {
+            val todosLosItinerariosPar = todosLosItinerarios.par
+            val valor_optimo = todosLosItinerariosPar.map(objective_function).min
+            todosLosItinerariosPar.filter(it => objective_function(it) == valor_optimo).toList
+          } else {
+            todosLosItinerarios.sortBy(objective_function).take(top_k)
+          }
+
+        }
+      }
+      inner
+    }
+    
+    def objectivoAire(itinerario: Itinerario): Double = {
+    
+    def distAP(Org: Aeropuerto, Dst: Aeropuerto): Double = {
+
+      sqrt(pow(Org.X - Dst.X, 2) + pow(Org.Y - Dst.Y, 2))
+    }
+
+    def vueloAire(vuelo: Vuelo): Double = {
+      distAP(codigoApHashMap(vuelo.Org), codigoApHashMap(vuelo.Dst))
+    }
+    itinerario.map(vueloAire).sum
+  }
+    
+    val itinerariosAirePar = itinerariosParBase(objectivoAire)
+    
 }
