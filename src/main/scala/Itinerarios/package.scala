@@ -1,6 +1,7 @@
 import Datos._
 import common._
 import scala.math.{sqrt, pow}
+import scala.collection.immutable.HashMap 
 
 package object Itinerarios {
 
